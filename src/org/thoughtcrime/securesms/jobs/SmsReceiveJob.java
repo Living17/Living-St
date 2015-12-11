@@ -41,6 +41,7 @@ public class SmsReceiveJob extends ContextJob {
 
   @Override
   public void onRun() {
+    Log.w(TAG, "onRun()");
     Optional<IncomingTextMessage> message      = assembleMessageFragments(pdus);
     MasterSecret                  masterSecret = KeyCachingService.getMasterSecret(context);
 
@@ -53,11 +54,15 @@ public class SmsReceiveJob extends ContextJob {
     }
 
     if (message.isPresent() && !isBlocked(message.get())) {
+      Log.w(TAG, "Inserting message...");
       Pair<Long, Long> messageAndThreadId = storeMessage(masterSecretUnion, message.get());
+      Log.w(TAG, "Updating notification...");
       MessageNotifier.updateNotification(context, masterSecret, messageAndThreadId.second);
     } else if (message.isPresent()) {
       Log.w(TAG, "*** Received blocked SMS, ignoring...");
     }
+
+    Log.w(TAG, "Done...");
   }
 
   @Override
@@ -85,10 +90,12 @@ public class SmsReceiveJob extends ContextJob {
     Pair<Long, Long> messageAndThreadId;
 
     if (message.isSecureMessage()) {
+      Log.w(TAG, "Inserting secure message... ???");
       IncomingTextMessage placeholder = new IncomingTextMessage(message, "");
       messageAndThreadId = database.insertMessageInbox(placeholder);
       database.markAsLegacyVersion(messageAndThreadId.first);
     } else {
+      Log.w(TAG, "Inserting plain old message...");
       messageAndThreadId = database.insertMessageInbox(masterSecret, message);
     }
 
@@ -98,11 +105,15 @@ public class SmsReceiveJob extends ContextJob {
   private Optional<IncomingTextMessage> assembleMessageFragments(Object[] pdus) {
     List<IncomingTextMessage> messages = new LinkedList<>();
 
+    Log.w(TAG, "Assembling PDUs: " + pdus.length);
+
     for (Object pdu : pdus) {
+      Log.w(TAG, "Adding PDU: " + pdu);
       messages.add(new IncomingTextMessage(SmsMessage.createFromPdu((byte[])pdu)));
     }
 
     if (messages.isEmpty()) {
+      Log.w(TAG, "Empty messages list!");
       return Optional.absent();
     }
 
