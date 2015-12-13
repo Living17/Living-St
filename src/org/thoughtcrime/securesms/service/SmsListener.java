@@ -75,13 +75,19 @@ public class SmsListener extends BroadcastReceiver {
   private String getSmsMessageBodyFromIntent(Intent intent) {
     Bundle bundle             = intent.getExtras();
     Object[] pdus             = (Object[])bundle.get("pdus");
+
+    Log.w(TAG, "getSmsMessageBodyFromIntent PDUs: " + pdus);
+
     StringBuilder bodyBuilder = new StringBuilder();
 
     if (pdus == null)
       return null;
 
-    for (Object pdu : pdus)
-      bodyBuilder.append(SmsMessage.createFromPdu((byte[])pdu).getDisplayMessageBody());
+    for (Object pdu : pdus) {
+      Log.w(TAG, "PDU Body: " + SmsMessage.createFromPdu((byte[])pdu).getDisplayMessageBody());
+
+      bodyBuilder.append(SmsMessage.createFromPdu((byte[]) pdu).getDisplayMessageBody());
+    }
 
     return bodyBuilder.toString();
   }
@@ -99,6 +105,8 @@ public class SmsListener extends BroadcastReceiver {
   private boolean isRelevant(Context context, Intent intent) {
     SmsMessage message = getSmsMessageFromIntent(intent);
     String messageBody = getSmsMessageBodyFromIntent(intent);
+
+    Log.w(TAG, "SMS Message body: " + messageBody);
 
     if (message == null && messageBody == null)
       return false;
@@ -153,9 +161,12 @@ public class SmsListener extends BroadcastReceiver {
 
   @Override
   public void onReceive(Context context, Intent intent) {
-    Log.w("SMSListener", "Got SMS broadcast...");
+    Log.w("SMSListener", "Got SMS broadcast! Action: " + intent.getAction());
 
     String messageBody = getSmsMessageBodyFromIntent(intent);
+
+    Log.w(TAG, "* Message body: " + messageBody);
+
     if (SMS_RECEIVED_ACTION.equals(intent.getAction()) && isChallenge(context, messageBody)) {
       Log.w("SmsListener", "Got challenge!");
       Intent challengeIntent = new Intent(RegistrationService.CHALLENGE_EVENT);
@@ -172,6 +183,8 @@ public class SmsListener extends BroadcastReceiver {
       ApplicationContext.getInstance(context).getJobManager().add(new SmsReceiveJob(context, pdus));
 
       abortBroadcast();
+    } else {
+      Log.w(TAG, "SMS Doesn't qualify!");
     }
   }
 }
