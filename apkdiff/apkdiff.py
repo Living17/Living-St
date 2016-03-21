@@ -5,56 +5,56 @@ from zipfile import ZipFile
 
 class ApkDiff:
 
-    def __init__(self, sourceApk, destinationApk):
-        self.sourceApk      = sourceApk
-        self.destinationApk = destinationApk
+    IGNORE_FILES = ["META-INF/CERT.RSA", "META-INF/CERT.SF", "META-INF/MANIFEST.MF"]
 
-    def compare(self):
-        sourceZip      = ZipFile(self.sourceApk, 'r')
-        destinationZip = ZipFile(self.destinationApk, 'r')
+    def compare(self, sourceApk, destinationApk):
+        sourceZip      = ZipFile(sourceApk, 'r')
+        destinationZip = ZipFile(destinationApk, 'r')
 
-        self.compareManifests(sourceZip, destinationZip)
-
-        if self.compareEntries(sourceZip, destinationZip) == True:
+        if self.compareManifests(sourceZip, destinationZip) and self.compareEntries(sourceZip, destinationZip) == True:
             print "APKs match!"
         else:
             print "APKs don't match!"
 
     def compareManifests(self, sourceZip, destinationZip):
-        sourceEntrySet      = set(sourceZip.namelist())
-        destinationEntrySet = set(destinationZip.namelist())
+        sourceEntrySortedList      = sorted(sourceZip.namelist())
+        destinationEntrySortedList = sorted(destinationZip.namelist())
 
-        if len(sourceEntrySet.difference(destinationEntrySet)) != 0:
-            for element in sourceEntrySet.difference(destinationEntrySet):
-                print "%s contains %s, which is missing from %s" % (self.sourceApk, element, self.destinationApk)
+        for ignoreFile in self.IGNORE_FILES:
+            while ignoreFile in sourceEntrySortedList: sourceEntrySortedList.remove(ignoreFile)
+            while ignoreFile in destinationEntrySortedList: destinationEntrySortedList.remove(ignoreFile)
+                    
+        if len(sourceEntrySortedList) != len(destinationEntrySortedList):
+            print "Manifest lengths differ!"
+        
+        for (sourceEntryName, destinationEntryName) in zip(sourceEntrySortedList, destinationEntrySortedList):
+            if sourceEntryName != destinationEntryName:
+                print "Sorted manifests don't match, %s vs %s" % (sourceEntryName, destinationEntryName)   
+                return False
 
-            sys.exit(1)
-
-        if len(destinationEntrySet.difference(sourceEntrySet)) != 0:
-            for element in destinationEntrySet.difference(sourceEntrySet):
-                print "%s contains %s, which is missing from %s" % (self.destinationApk, element, self.sourceApk)
-
-            sys.exit(1)
-
+        return True
+            
     def compareEntries(self, sourceZip, destinationZip):
-        sourceInfoList      = sourceZip.infolist()
-        destinationInfoList = destinationZip.infolist()
-
+        sourceInfoList      = filter(lambda sourceInfo: sourceInfo.filename not in self.IGNORE_FILES, sourceZip.infolist())
+        destinationInfoList = filter(lambda destinationInfo: destinationInfo.filename not in self.IGNORE_FILES, destinationZip.infolist())
+        
         if len(sourceInfoList) != len(destinationInfoList):
             print "APK info lists of different length!"
             return False
 
-        for (sourceEntryInfo, destinationEntryInfo) in zip(sourceInfoList, destinationInfoList):
-            if sourceEntryInfo.filename == destinationEntryInfo.filename and sourceEntryInfo.filename == "META-INF/CERT.RSA":
-                return True
+        for sourceEntryInfo in sourceInfoList:
+            for destinationEntryInfo in list(destinationInfoList):
+                if sourceEntryInfo.filename == destinationEntryInfo.filename:
+                    sourceEntry      = sourceZip.open(sourceEntryInfo, 'r')
+                    destinationEntry = destinationZip.open(destinationEntryInfo, 'r')
 
-            sourceEntry      = sourceZip.open(sourceEntryInfo, 'r')
-            destinationEntry = destinationZip.open(destinationEntryInfo, 'r')
+                    if self.compareFiles(sourceEntry, destinationEntry) != True:
+                        print "APK entry %s does not match %s!" % (sourceEntryInfo.filename, destinationEntryInfo.filename)
+                        return False
 
-            if self.compareFiles(sourceEntry, destinationEntry) != True:
-                print "APK entry %s does not match %s!" % (sourceEntryInfo.filename, destinationEntryInfo.filename)
-                return False
-
+                    destinationInfoList.remove(destinationEntryInfo)
+                    break
+                
         return True
 
     def compareFiles(self, sourceFile, destinationFile):
@@ -75,4 +75,4 @@ if __name__ == '__main__':
         print "Usage: apkdiff <pathToFirstApk> <pathToSecondApk>"
         sys.exit(1)
 
-    ApkDiff(sys.argv[1], sys.argv[2]).compare()
+    ApkDiff().compare(sys.argv[1], sys.argv[2])
