@@ -5,7 +5,7 @@ RUN dpkg --add-architecture i386 && \
     apt-get install -y software-properties-common && \
     add-apt-repository -y ppa:openjdk-r/ppa && \
     apt-get update -y && \
-    apt-get install -y libc6:i386=2.19-0ubuntu6.7 libncurses5:i386=5.9+20140118-1ubuntu1 libstdc++6:i386=4.8.4-2ubuntu1~14.04.1 lib32z1=1:1.2.8.dfsg-1ubuntu1 wget=1.15-1ubuntu1.14.04.1 openjdk-8-jdk=8u72-b15-1~trusty1 git=1:1.9.1-1ubuntu0.2 unzip=6.0-9ubuntu1.5 && \
+    apt-get install -y libc6:i386=2.19-0ubuntu6.7 libncurses5:i386=5.9+20140118-1ubuntu1 libstdc++6:i386=4.8.4-2ubuntu1~14.04.1 lib32z1=1:1.2.8.dfsg-1ubuntu1 wget openjdk-8-jdk=8u72-b15-1~trusty1 git unzip && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get autoremove -y && \
     apt-get clean
