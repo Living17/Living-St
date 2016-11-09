@@ -61,8 +61,6 @@ import android.widget.Toast;
 import com.google.android.gms.location.places.ui.PlacePicker;
 import com.google.protobuf.ByteString;
 
-import org.thoughtcrime.redphone.RedPhone;
-import org.thoughtcrime.redphone.RedPhoneService;
 import org.thoughtcrime.securesms.TransportOptions.OnTransportChangedListener;
 import org.thoughtcrime.securesms.audio.AudioRecorder;
 import org.thoughtcrime.securesms.audio.AudioSlidePlayer;
@@ -118,6 +116,7 @@ import org.thoughtcrime.securesms.recipients.RecipientFormattingException;
 import org.thoughtcrime.securesms.recipients.Recipients;
 import org.thoughtcrime.securesms.recipients.Recipients.RecipientsModifiedListener;
 import org.thoughtcrime.securesms.service.KeyCachingService;
+import org.thoughtcrime.securesms.service.WebRtcCallService;
 import org.thoughtcrime.securesms.sms.MessageSender;
 import org.thoughtcrime.securesms.sms.OutgoingEncryptedMessage;
 import org.thoughtcrime.securesms.sms.OutgoingEndSessionMessage;
@@ -717,12 +716,12 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     if (recipient == null) return;
 
     if (isSecureVoice) {
-      Intent intent = new Intent(this, RedPhoneService.class);
-      intent.setAction(RedPhoneService.ACTION_OUTGOING_CALL);
-      intent.putExtra(RedPhoneService.EXTRA_REMOTE_NUMBER, recipient.getNumber());
+      Intent intent = new Intent(this, WebRtcCallService.class);
+      intent.setAction(WebRtcCallService.ACTION_OUTGOING_CALL);
+      intent.putExtra(WebRtcCallService.EXTRA_REMOTE_NUMBER, recipient.getNumber());
       startService(intent);
 
-      Intent activityIntent = new Intent(this, RedPhone.class);
+      Intent activityIntent = new Intent(this, WebRtcCallActivity.class);
       activityIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
       startActivity(activityIntent);
     } else {

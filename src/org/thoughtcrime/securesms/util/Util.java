@@ -415,4 +415,8 @@ public class Util {
   public static float clamp(float value, float min, float max) {
     return Math.min(Math.max(value, min), max);
   }
+
+  public static boolean isEquals(@Nullable Long first, long second) {
+    return first != null && first == second;
+  }
 }

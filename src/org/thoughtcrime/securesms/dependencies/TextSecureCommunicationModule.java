@@ -23,6 +23,7 @@ import org.thoughtcrime.securesms.jobs.RefreshPreKeysJob;
 import org.thoughtcrime.securesms.push.SecurityEventListener;
 import org.thoughtcrime.securesms.push.TextSecurePushTrustStore;
 import org.thoughtcrime.securesms.service.MessageRetrievalService;
+import org.thoughtcrime.securesms.service.WebRtcCallService;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
@@ -49,7 +50,8 @@ import dagger.Provides;
                                      MultiDeviceBlockedUpdateJob.class,
                                      DeviceListFragment.class,
                                      RefreshAttributesJob.class,
-                                     GcmRefreshJob.class})
+                                     GcmRefreshJob.class,
+                                     WebRtcCallService.class})
 public class TextSecureCommunicationModule {
 
   private final Context context;

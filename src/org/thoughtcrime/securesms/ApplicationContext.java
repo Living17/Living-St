@@ -35,6 +35,7 @@ import org.thoughtcrime.securesms.jobs.requirements.MediaNetworkRequirementProvi
 import org.thoughtcrime.securesms.jobs.requirements.ServiceRequirementProvider;
 import org.thoughtcrime.securesms.service.ExpiringMessageManager;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
+import org.webrtc.PeerConnectionFactory;
 import org.whispersystems.jobqueue.JobManager;
 import org.whispersystems.jobqueue.dependencies.DependencyInjector;
 import org.whispersystems.jobqueue.requirements.NetworkRequirementProvider;
@@ -74,6 +75,8 @@ public class ApplicationContext extends Application implements DependencyInjecto
     initializeExpiringMessageManager();
     initializeGcmCheck();
     initializeSignedPreKeyCheck();
+
+    PeerConnectionFactory.initializeAndroidGlobals(this, true, true, true);
   }
 
   @Override

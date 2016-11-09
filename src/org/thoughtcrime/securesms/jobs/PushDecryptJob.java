@@ -1,6 +1,7 @@
 package org.thoughtcrime.securesms.jobs;
 
 import android.content.Context;
+import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import android.util.Pair;
@@ -31,6 +32,7 @@ import org.thoughtcrime.securesms.notifications.MessageNotifier;
 import org.thoughtcrime.securesms.recipients.RecipientFactory;
 import org.thoughtcrime.securesms.recipients.Recipients;
 import org.thoughtcrime.securesms.service.KeyCachingService;
+import org.thoughtcrime.securesms.service.WebRtcCallService;
 import org.thoughtcrime.securesms.sms.IncomingEncryptedMessage;
 import org.thoughtcrime.securesms.sms.IncomingEndSessionMessage;
 import org.thoughtcrime.securesms.sms.IncomingPreKeyBundleMessage;
@@ -59,6 +61,11 @@ import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceEnvelope;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
+import org.whispersystems.signalservice.api.messages.calls.AnswerMessage;
+import org.whispersystems.signalservice.api.messages.calls.HangupMessage;
+import org.whispersystems.signalservice.api.messages.calls.IceUpdateMessage;
+import org.whispersystems.signalservice.api.messages.calls.OfferMessage;
+import org.whispersystems.signalservice.api.messages.calls.SignalServiceCallMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.ReadMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.RequestMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SentTranscriptMessage;
@@ -153,6 +160,16 @@ public class PushDecryptJob extends ContextJob {
         else if (syncMessage.getRequest().isPresent()) handleSynchronizeRequestMessage(masterSecret, syncMessage.getRequest().get());
         else if (syncMessage.getRead().isPresent())    handleSynchronizeReadMessage(masterSecret, syncMessage.getRead().get(), envelope.getTimestamp());
         else                                           Log.w(TAG, "Contains no known sync types...");
+      } else if (content.getCallMessage().isPresent()) {
+        Log.w(TAG, "Got call message...");
+        SignalServiceCallMessage message = content.getCallMessage().get();
+
+        if      (message.getOfferMessage().isPresent())     handleCallOfferMessage(envelope, message.getOfferMessage().get());
+        else if (message.getAnswerMessage().isPresent())    handleCallAnswerMessage(envelope, message.getAnswerMessage().get());
+        else if (message.getIceUpdateMessage().isPresent()) handleCallIceUpdateMessage(envelope, message.getIceUpdateMessage().get());
+        else if (message.getHangupMessage().isPresent())    handleCallHangupMessage(envelope, message.getHangupMessage().get());
+      } else {
+        Log.w(TAG, "Got unrecognized message...");
       }
 
       if (envelope.isPreKeySignalMessage()) {
@@ -177,6 +194,55 @@ public class PushDecryptJob extends ContextJob {
       Log.w(TAG, e);
       handleUntrustedIdentityMessage(masterSecret, envelope, smsMessageId);
     }
+  }
+
+  private void handleCallOfferMessage(@NonNull SignalServiceEnvelope envelope,
+                                      @NonNull OfferMessage message)
+  {
+    Log.w(TAG, "handleCallOfferMessage...");
+    Intent intent = new Intent(context, WebRtcCallService.class);
+    intent.setAction(WebRtcCallService.ACTION_INCOMING_CALL);
+    intent.putExtra(WebRtcCallService.EXTRA_CALL_ID, message.getId());
+    intent.putExtra(WebRtcCallService.EXTRA_REMOTE_NUMBER, envelope.getSource());
+    intent.putExtra(WebRtcCallService.EXTRA_REMOTE_DESCRIPTION, message.getDescription());
+    context.startService(intent);
+  }
+
+  private void handleCallAnswerMessage(@NonNull SignalServiceEnvelope envelope,
+                                       @NonNull AnswerMessage message)
+  {
+    Log.w(TAG, "handleCallAnswerMessage...");
+    Intent intent = new Intent(context, WebRtcCallService.class);
+    intent.setAction(WebRtcCallService.ACTION_RESPONSE_MESSAGE);
+    intent.putExtra(WebRtcCallService.EXTRA_CALL_ID, message.getId());
+    intent.putExtra(WebRtcCallService.EXTRA_REMOTE_NUMBER, envelope.getSource());
+    intent.putExtra(WebRtcCallService.EXTRA_REMOTE_DESCRIPTION, message.getDescription());
+    context.startService(intent);
+  }
+
+  private void handleCallIceUpdateMessage(@NonNull SignalServiceEnvelope envelope,
+                                         @NonNull IceUpdateMessage message)
+  {
+    Log.w(TAG, "handleCallIceUpdateMessage...");
+    Intent intent = new Intent(context, WebRtcCallService.class);
+    intent.setAction(WebRtcCallService.ACTION_ICE_MESSAGE);
+    intent.putExtra(WebRtcCallService.EXTRA_CALL_ID, message.getId());
+    intent.putExtra(WebRtcCallService.EXTRA_REMOTE_NUMBER, envelope.getSource());
+    intent.putExtra(WebRtcCallService.EXTRA_ICE_SDP, message.getSdp());
+    intent.putExtra(WebRtcCallService.EXTRA_ICE_SDP_MID, message.getSdpMid());
+    intent.putExtra(WebRtcCallService.EXTRA_ICE_SDP_LINE_INDEX, message.getSdpMLineIndex());
+    context.startService(intent);
+  }
+
+  private void handleCallHangupMessage(@NonNull SignalServiceEnvelope envelope,
+                                       @NonNull HangupMessage message)
+  {
+    Log.w(TAG, "handleCallHangupMessage");
+    Intent intent = new Intent(context, WebRtcCallService.class);
+    intent.setAction(WebRtcCallService.ACTION_REMOTE_HANGUP);
+    intent.putExtra(WebRtcCallService.EXTRA_CALL_ID, message.getId());
+    intent.putExtra(WebRtcCallService.EXTRA_REMOTE_NUMBER, envelope.getSource());
+    context.startService(intent);
   }
 
   private void handleEndSessionMessage(@NonNull MasterSecretUnion        masterSecret,
