@@ -128,7 +128,7 @@ public class PeerConnectionWrapper {
     }, mediaConstraints);
 
     try {
-      return future.get();
+      return correctSessionDescription(future.get());
     } catch (InterruptedException e) {
       throw new AssertionError(e);
     } catch (ExecutionException e) {
@@ -162,7 +162,7 @@ public class PeerConnectionWrapper {
     }, mediaConstraints);
 
     try {
-      return future.get();
+      return correctSessionDescription(future.get());
     } catch (InterruptedException e) {
       throw new AssertionError(e);
     } catch (ExecutionException e) {
@@ -293,6 +293,13 @@ public class PeerConnectionWrapper {
 
     Log.w(TAG, "Video capture not supported!");
     return null;
+  }
+
+  private SessionDescription correctSessionDescription(SessionDescription sessionDescription) {
+    String updatedSdp = sessionDescription.description.replaceAll("(a=fmtp:111 ((?!cbr=).)*)\r?\n", "$1;cbr=1\r\n");
+    updatedSdp = updatedSdp.replaceAll(".+urn:ietf:params:rtp-hdrext:ssrc-audio-level.*\r?\n", "");
+
+    return new SessionDescription(sessionDescription.type, updatedSdp);
   }
 
   public static class PeerConnectionException extends Exception {
