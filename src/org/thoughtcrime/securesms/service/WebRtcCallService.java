@@ -491,9 +491,12 @@ public class WebRtcCallService extends Service implements InjectableType, CallSt
       return;
     }
 
-    if (recipient == null) {
+    if (recipient == null || callId == null || dataChannel == null) {
       throw new AssertionError("assert");
     }
+
+    this.dataChannel.send(new DataChannel.Buffer(ByteBuffer.wrap(Data.newBuilder().setHangup(Hangup.newBuilder().setId(this.callId)).build().toByteArray()), false));
+    sendMessage(this.recipient, SignalServiceCallMessage.forHangup(new HangupMessage(this.callId)));
 
     DatabaseFactory.getSmsDatabase(this).insertMissedCall(recipient.getNumber());
 
@@ -522,7 +525,11 @@ public class WebRtcCallService extends Service implements InjectableType, CallSt
       throw new AssertionError("assert");
     }
 
-    sendMessage(WebRtcCallEvent.Type.CALL_DISCONNECTED, this.recipient, null);
+    if (this.callState == CallState.STATE_DIALING || this.callState == CallState.STATE_REMOTE_RINGING) {
+      sendMessage(WebRtcCallEvent.Type.RECIPIENT_UNAVAILABLE, this.recipient, null);
+    } else {
+      sendMessage(WebRtcCallEvent.Type.CALL_DISCONNECTED, this.recipient, null);
+    }
 
     if (this.callState == CallState.STATE_ANSWERING || this.callState == CallState.STATE_LOCAL_RINGING) {
       insertMissedCall(this.recipient, true);
