@@ -22,6 +22,7 @@ import org.thoughtcrime.securesms.database.MessagingDatabase.SyncMessageId;
 import org.thoughtcrime.securesms.database.MmsDatabase;
 import org.thoughtcrime.securesms.database.NoSuchMessageException;
 import org.thoughtcrime.securesms.database.PushDatabase;
+import org.thoughtcrime.securesms.database.SmsDatabase;
 import org.thoughtcrime.securesms.database.ThreadDatabase;
 import org.thoughtcrime.securesms.groups.GroupMessageProcessor;
 import org.thoughtcrime.securesms.mms.IncomingMediaMessage;
@@ -164,10 +165,10 @@ public class PushDecryptJob extends ContextJob {
         Log.w(TAG, "Got call message...");
         SignalServiceCallMessage message = content.getCallMessage().get();
 
-        if      (message.getOfferMessage().isPresent())     handleCallOfferMessage(envelope, message.getOfferMessage().get());
-        else if (message.getAnswerMessage().isPresent())    handleCallAnswerMessage(envelope, message.getAnswerMessage().get());
-        else if (message.getIceUpdateMessage().isPresent()) handleCallIceUpdateMessage(envelope, message.getIceUpdateMessage().get());
-        else if (message.getHangupMessage().isPresent())    handleCallHangupMessage(envelope, message.getHangupMessage().get());
+        if      (message.getOfferMessage().isPresent())      handleCallOfferMessage(envelope, message.getOfferMessage().get(), smsMessageId);
+        else if (message.getAnswerMessage().isPresent())     handleCallAnswerMessage(envelope, message.getAnswerMessage().get());
+        else if (message.getIceUpdateMessages().isPresent()) handleCallIceUpdateMessage(envelope, message.getIceUpdateMessages().get());
+        else if (message.getHangupMessage().isPresent())     handleCallHangupMessage(envelope, message.getHangupMessage().get(), smsMessageId);
       } else {
         Log.w(TAG, "Got unrecognized message...");
       }
@@ -197,15 +198,22 @@ public class PushDecryptJob extends ContextJob {
   }
 
   private void handleCallOfferMessage(@NonNull SignalServiceEnvelope envelope,
-                                      @NonNull OfferMessage message)
+                                      @NonNull OfferMessage message,
+                                      @NonNull Optional<Long> smsMessageId)
   {
     Log.w(TAG, "handleCallOfferMessage...");
-    Intent intent = new Intent(context, WebRtcCallService.class);
-    intent.setAction(WebRtcCallService.ACTION_INCOMING_CALL);
-    intent.putExtra(WebRtcCallService.EXTRA_CALL_ID, message.getId());
-    intent.putExtra(WebRtcCallService.EXTRA_REMOTE_NUMBER, envelope.getSource());
-    intent.putExtra(WebRtcCallService.EXTRA_REMOTE_DESCRIPTION, message.getDescription());
-    context.startService(intent);
+
+    if (smsMessageId.isPresent()) {
+      SmsDatabase database = DatabaseFactory.getSmsDatabase(context);
+      database.markAsMissedCall(smsMessageId.get());
+    } else {
+      Intent intent = new Intent(context, WebRtcCallService.class);
+      intent.setAction(WebRtcCallService.ACTION_INCOMING_CALL);
+      intent.putExtra(WebRtcCallService.EXTRA_CALL_ID, message.getId());
+      intent.putExtra(WebRtcCallService.EXTRA_REMOTE_NUMBER, envelope.getSource());
+      intent.putExtra(WebRtcCallService.EXTRA_REMOTE_DESCRIPTION, message.getDescription());
+      context.startService(intent);
+    }
   }
 
   private void handleCallAnswerMessage(@NonNull SignalServiceEnvelope envelope,
@@ -221,28 +229,35 @@ public class PushDecryptJob extends ContextJob {
   }
 
   private void handleCallIceUpdateMessage(@NonNull SignalServiceEnvelope envelope,
-                                         @NonNull IceUpdateMessage message)
+                                          @NonNull List<IceUpdateMessage> messages)
   {
-    Log.w(TAG, "handleCallIceUpdateMessage...");
-    Intent intent = new Intent(context, WebRtcCallService.class);
-    intent.setAction(WebRtcCallService.ACTION_ICE_MESSAGE);
-    intent.putExtra(WebRtcCallService.EXTRA_CALL_ID, message.getId());
-    intent.putExtra(WebRtcCallService.EXTRA_REMOTE_NUMBER, envelope.getSource());
-    intent.putExtra(WebRtcCallService.EXTRA_ICE_SDP, message.getSdp());
-    intent.putExtra(WebRtcCallService.EXTRA_ICE_SDP_MID, message.getSdpMid());
-    intent.putExtra(WebRtcCallService.EXTRA_ICE_SDP_LINE_INDEX, message.getSdpMLineIndex());
-    context.startService(intent);
+    Log.w(TAG, "handleCallIceUpdateMessage... " + messages.size());
+    for (IceUpdateMessage message : messages) {
+      Intent intent = new Intent(context, WebRtcCallService.class);
+      intent.setAction(WebRtcCallService.ACTION_ICE_MESSAGE);
+      intent.putExtra(WebRtcCallService.EXTRA_CALL_ID, message.getId());
+      intent.putExtra(WebRtcCallService.EXTRA_REMOTE_NUMBER, envelope.getSource());
+      intent.putExtra(WebRtcCallService.EXTRA_ICE_SDP, message.getSdp());
+      intent.putExtra(WebRtcCallService.EXTRA_ICE_SDP_MID, message.getSdpMid());
+      intent.putExtra(WebRtcCallService.EXTRA_ICE_SDP_LINE_INDEX, message.getSdpMLineIndex());
+      context.startService(intent);
+    }
   }
 
   private void handleCallHangupMessage(@NonNull SignalServiceEnvelope envelope,
-                                       @NonNull HangupMessage message)
+                                       @NonNull HangupMessage message,
+                                       @NonNull Optional<Long> smsMessageId)
   {
     Log.w(TAG, "handleCallHangupMessage");
-    Intent intent = new Intent(context, WebRtcCallService.class);
-    intent.setAction(WebRtcCallService.ACTION_REMOTE_HANGUP);
-    intent.putExtra(WebRtcCallService.EXTRA_CALL_ID, message.getId());
-    intent.putExtra(WebRtcCallService.EXTRA_REMOTE_NUMBER, envelope.getSource());
-    context.startService(intent);
+    if (smsMessageId.isPresent()) {
+      DatabaseFactory.getSmsDatabase(context).markAsMissedCall(smsMessageId.get());
+    } else {
+      Intent intent = new Intent(context, WebRtcCallService.class);
+      intent.setAction(WebRtcCallService.ACTION_REMOTE_HANGUP);
+      intent.putExtra(WebRtcCallService.EXTRA_CALL_ID, message.getId());
+      intent.putExtra(WebRtcCallService.EXTRA_REMOTE_NUMBER, envelope.getSource());
+      context.startService(intent);
+    }
   }
 
   private void handleEndSessionMessage(@NonNull MasterSecretUnion        masterSecret,
@@ -650,15 +665,16 @@ public class PushDecryptJob extends ContextJob {
       EncryptingSmsDatabase database       = DatabaseFactory.getEncryptingSmsDatabase(context);
       Recipients            recipients     = RecipientFactory.getRecipientsFromString(context, envelope.getSource(), false);
       long                  recipientId    = recipients.getPrimaryRecipient().getRecipientId();
-      PreKeySignalMessage   whisperMessage = new PreKeySignalMessage(envelope.getLegacyMessage());
+      byte[]                serialized     = envelope.hasLegacyMessage() ? envelope.getLegacyMessage() : envelope.getContent();
+      PreKeySignalMessage   whisperMessage = new PreKeySignalMessage(serialized);
       IdentityKey           identityKey    = whisperMessage.getIdentityKey();
-      String                encoded        = Base64.encodeBytes(envelope.getLegacyMessage());
+      String                encoded        = Base64.encodeBytes(serialized);
       IncomingTextMessage   textMessage    = new IncomingTextMessage(envelope.getSource(), envelope.getSourceDevice(),
                                                                      envelope.getTimestamp(), encoded,
                                                                      Optional.<SignalServiceGroup>absent(), 0);
 
       if (!smsMessageId.isPresent()) {
-        IncomingPreKeyBundleMessage bundleMessage      = new IncomingPreKeyBundleMessage(textMessage, encoded);
+        IncomingPreKeyBundleMessage bundleMessage      = new IncomingPreKeyBundleMessage(textMessage, encoded, envelope.hasLegacyMessage());
         Pair<Long, Long>            messageAndThreadId = database.insertMessageInbox(masterSecret, bundleMessage);
 
         database.setMismatchedIdentity(messageAndThreadId.first, recipientId, identityKey);

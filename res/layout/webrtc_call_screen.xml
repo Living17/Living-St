@@ -42,15 +42,56 @@
                        tools:src="@drawable/ic_contact_picture_large"
                     />
 
+            <LinearLayout android:id="@+id/untrusted_layout"
+                          android:layout_width="match_parent"
+                          android:layout_height="match_parent"
+                          android:background="@color/grey_400"
+                          android:orientation="vertical"
+                          android:visibility="gone"
+                          android:gravity="center">
+
+                <TextView android:id="@+id/untrusted_explanation"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:layout_gravity="center"
+                          android:textSize="16sp"
+                          android:maxWidth="270dp"
+                          android:lineSpacingExtra="2sp"
+                          tools:text="The safety numbers for your conversation with Masha have changed. This could either mean that someone is trying to intercept your communication, or that Masha simply re-installed Signal. You may wish to verify safety numbers for this contact."/>
+
+                <LinearLayout
+                        android:layout_marginTop="20dp"
+                        android:maxWidth="250dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content">
+
+                    <Button android:id="@+id/accept_safety_numbers"
+                            android:text="Accept"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginRight="10dp"/>
+
+                    <Button android:id="@+id/cancel_safety_numbers"
+                            android:text="Cancel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"/>
+
+                </LinearLayout>
+
+
+            </LinearLayout>
+
             <org.thoughtcrime.securesms.components.webrtc.PercentFrameLayout
                     android:id="@+id/remote_render_layout"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"/>
+                    android:layout_height="match_parent"
+                    tools:visibility="invisible"/>
 
             <org.thoughtcrime.securesms.components.webrtc.PercentFrameLayout
                     android:id="@+id/local_render_layout"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"/>
+                    android:layout_height="match_parent"
+                    tools:visibility="invisible"/>
 
         </FrameLayout>
 

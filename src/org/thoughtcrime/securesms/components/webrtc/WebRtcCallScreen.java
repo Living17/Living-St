@@ -24,12 +24,16 @@ import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.method.LinkMovementMethod;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -39,7 +43,9 @@ import org.thoughtcrime.securesms.contacts.avatars.ContactPhoto;
 import org.thoughtcrime.securesms.contacts.avatars.ContactPhotoFactory;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.service.WebRtcCallService;
+import org.thoughtcrime.securesms.util.VerifySpan;
 import org.webrtc.SurfaceViewRenderer;
+import org.whispersystems.libsignal.IdentityKey;
 
 /**
  * A UI widget that encapsulates the entire in-call screen
@@ -59,6 +65,10 @@ public class WebRtcCallScreen extends FrameLayout implements Recipient.Recipient
   private TextView             phoneNumber;
   private TextView             label;
   private TextView             elapsedTime;
+  private View                 untrustedIdentityContainer;
+  private TextView             untrustedIdentityExplanation;
+  private Button               acceptIdentityButton;
+  private Button               cancelIdentityButton;
   private TextView             status;
   private FloatingActionButton endCallButton;
   private WebRtcCallControls   controls;
@@ -88,7 +98,7 @@ public class WebRtcCallScreen extends FrameLayout implements Recipient.Recipient
     incomingCallOverlay.setActiveCall(sas);
   }
 
-  public void setActiveCall(Recipient personInfo, String message) {
+  public void setActiveCall(@NonNull Recipient personInfo, @NonNull String message) {
     setCard(personInfo, message);
     incomingCallOverlay.setActiveCall();
   }
@@ -98,11 +108,34 @@ public class WebRtcCallScreen extends FrameLayout implements Recipient.Recipient
     incomingCallOverlay.setIncomingCall();
   }
 
+  public void setUntrustedIdentity(Recipient personInfo, IdentityKey untrustedIdentity) {
+    String          name            = recipient.toShortString();
+    String          introduction    = String.format(getContext().getString(R.string.WebRtcCallScreen_new_safety_numbers), name, name);
+    SpannableString spannableString = new SpannableString(introduction + " " + getContext().getString(R.string.WebRtcCallScreen_you_may_wish_to_verify_this_contact));
+
+    spannableString.setSpan(new VerifySpan(getContext(), personInfo.getRecipientId(), untrustedIdentity),
+                            introduction.length()+1, spannableString.length(),
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+    setPersonInfo(personInfo);
+
+    this.incomingCallOverlay.setActiveCall();
+    this.status.setText(R.string.WebRtcCallScreen_new_safety_numbers_title);
+    this.untrustedIdentityContainer.setVisibility(View.VISIBLE);
+    this.untrustedIdentityExplanation.setText(spannableString);
+    this.untrustedIdentityExplanation.setMovementMethod(LinkMovementMethod.getInstance());
+
+    this.endCallButton.setVisibility(View.INVISIBLE);
+  }
+
+
   public void reset() {
     setPersonInfo(Recipient.getUnknownRecipient());
     this.status.setText("");
     this.recipient = null;
     this.controls.reset();
+    this.untrustedIdentityExplanation.setText("");
+    this.untrustedIdentityContainer.setVisibility(View.GONE);
     this.localRenderLayout.removeAllViews();
     this.remoteRenderLayout.removeAllViews();
 
@@ -134,6 +167,14 @@ public class WebRtcCallScreen extends FrameLayout implements Recipient.Recipient
     });
   }
 
+  public void setAcceptIdentityListener(OnClickListener listener) {
+    this.acceptIdentityButton.setOnClickListener(listener);
+  }
+
+  public void setCancelIdentityButton(OnClickListener listener) {
+    this.cancelIdentityButton.setOnClickListener(listener);
+  }
+
   public void notifyBluetoothChange() {
     this.controls.updateAudioButton();
   }
@@ -159,21 +200,24 @@ public class WebRtcCallScreen extends FrameLayout implements Recipient.Recipient
   }
 
   private void initialize() {
-    LayoutInflater inflater = (LayoutInflater)getContext()
-                              .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+    LayoutInflater inflater = (LayoutInflater)getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     inflater.inflate(R.layout.webrtc_call_screen, this, true);
 
-    this.elapsedTime        = (TextView) findViewById(R.id.elapsedTime);
-    this.photo              = (ImageView) findViewById(R.id.photo);
-    this.localRenderLayout  = (PercentFrameLayout) findViewById(R.id.local_render_layout);
-    this.remoteRenderLayout = (PercentFrameLayout) findViewById(R.id.remote_render_layout);
-    this.phoneNumber        = (TextView) findViewById(R.id.phoneNumber);
-    this.name               = (TextView) findViewById(R.id.name);
-    this.label              = (TextView) findViewById(R.id.label);
-    this.status             = (TextView) findViewById(R.id.callStateLabel);
-    this.controls           = (WebRtcCallControls) findViewById(R.id.inCallControls);
-    this.endCallButton      = (FloatingActionButton) findViewById(R.id.hangup_fab);
-    this.incomingCallOverlay = (WebRtcIncomingCallOverlay)findViewById(R.id.callControls);
+    this.elapsedTime                  = (TextView) findViewById(R.id.elapsedTime);
+    this.photo                        = (ImageView) findViewById(R.id.photo);
+    this.localRenderLayout            = (PercentFrameLayout) findViewById(R.id.local_render_layout);
+    this.remoteRenderLayout           = (PercentFrameLayout) findViewById(R.id.remote_render_layout);
+    this.phoneNumber                  = (TextView) findViewById(R.id.phoneNumber);
+    this.name                         = (TextView) findViewById(R.id.name);
+    this.label                        = (TextView) findViewById(R.id.label);
+    this.status                       = (TextView) findViewById(R.id.callStateLabel);
+    this.controls                     = (WebRtcCallControls) findViewById(R.id.inCallControls);
+    this.endCallButton                = (FloatingActionButton) findViewById(R.id.hangup_fab);
+    this.incomingCallOverlay          = (WebRtcIncomingCallOverlay) findViewById(R.id.callControls);
+    this.untrustedIdentityContainer   = findViewById(R.id.untrusted_layout);
+    this.untrustedIdentityExplanation = (TextView) findViewById(R.id.untrusted_explanation);
+    this.acceptIdentityButton         = (Button)findViewById(R.id.accept_safety_numbers);
+    this.cancelIdentityButton         = (Button)findViewById(R.id.cancel_safety_numbers);
 
     this.localRenderLayout.setHidden(true);
     this.remoteRenderLayout.setHidden(true);
@@ -229,6 +273,8 @@ public class WebRtcCallScreen extends FrameLayout implements Recipient.Recipient
   private void setCard(Recipient recipient, String status) {
     setPersonInfo(recipient);
     this.status.setText(status);
+    this.untrustedIdentityContainer.setVisibility(View.GONE);
+    this.endCallButton.setVisibility(View.VISIBLE);
   }
 
   @Override

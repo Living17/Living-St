@@ -75,7 +75,7 @@
 
     <!-- ConfirmIdentityDialog -->
     <string name="ConfirmIdentityDialog_the_signature_on_this_key_exchange_is_different">The
-        safety numbers for %1$s have changed. This could either mean that someone is trying to
+        safety numbers for your conversation with %1$s have changed. This could either mean that someone is trying to
         intercept your communication, or that %2$s simply re-installed Signal.
     </string>
     <string name="ConfirmIdentityDialog_you_may_wish_to_verify_this_contact">You may wish to verify
@@ -630,6 +630,13 @@
     <!-- SingleRecipientNotificationBuilder -->
     <string name="SingleRecipientNotificationBuilder_signal">Signal</string>
     <string name="SingleRecipientNotificationBuilder_new_message">New message</string>
+
+    <!-- WebRtcCallScreen -->
+    <string name="WebRtcCallScreen_new_safety_numbers">The safety numbers for your conversation with %1$s have changed. This could either mean that someone is trying to intercept your communication, or that %2$s simply re-installed Signal.</string>
+    <string name="WebRtcCallScreen_you_may_wish_to_verify_this_contact">You may wish to verify
+        safety numbers for this contact.
+    </string>
+
 
     <!-- attachment_type_selector -->
     <string name="attachment_type_selector__image">Image</string>
@@ -1258,6 +1265,7 @@
 
     <!-- transport_selection_list_item -->
     <string name="transport_selection_list_item__transport_icon">Transport icon</string>
+    <string name="WebRtcCallScreen_new_safety_numbers_title">New safety numbers</string>
 
 
     <!-- EOF -->

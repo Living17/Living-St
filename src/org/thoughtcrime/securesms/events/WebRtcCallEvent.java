@@ -16,24 +16,23 @@ public class WebRtcCallEvent {
     CONNECTING_TO_INITIATOR,
     CALL_DISCONNECTED,
     CALL_RINGING,
-    SERVER_MESSAGE,
     RECIPIENT_UNAVAILABLE,
     INCOMING_CALL,
     OUTGOING_CALL,
     CALL_BUSY,
     LOGIN_FAILED,
-    CLIENT_FAILURE,
     DEBUG_INFO,
     NO_SUCH_USER,
     REMOTE_VIDEO_ENABLED,
-    REMOTE_VIDEO_DISABLED
+    REMOTE_VIDEO_DISABLED,
+    UNTRUSTED_IDENTITY
   }
 
   private final @NonNull  Type      type;
   private final @NonNull  Recipient recipient;
-  private final @Nullable String    extra;
+  private final @Nullable Object    extra;
 
-  public WebRtcCallEvent(@NonNull Type type, @NonNull Recipient recipient, @Nullable String extra) {
+  public WebRtcCallEvent(@NonNull Type type, @NonNull Recipient recipient, @Nullable Object extra) {
     this.type      = type;
     this.recipient = recipient;
     this.extra     = extra;
@@ -47,7 +46,7 @@ public class WebRtcCallEvent {
     return recipient;
   }
 
-  public @Nullable String getExtra() {
+  public @Nullable Object getExtra() {
     return extra;
   }
 }

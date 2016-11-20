@@ -31,6 +31,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 
@@ -38,11 +39,14 @@ import org.thoughtcrime.redphone.util.AudioUtils;
 import org.thoughtcrime.securesms.components.webrtc.WebRtcCallControls;
 import org.thoughtcrime.securesms.components.webrtc.WebRtcCallScreen;
 import org.thoughtcrime.securesms.components.webrtc.WebRtcIncomingCallOverlay;
+import org.thoughtcrime.securesms.database.DatabaseFactory;
+import org.thoughtcrime.securesms.database.IdentityDatabase;
 import org.thoughtcrime.securesms.events.WebRtcCallEvent;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.service.WebRtcCallService;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
 import org.thoughtcrime.securesms.util.ViewUtil;
+import org.whispersystems.libsignal.IdentityKey;
 
 import de.greenrobot.event.EventBus;
 
@@ -209,9 +213,7 @@ public class WebRtcCallActivity extends Activity {
 
   private void handleCallConnected(@NonNull WebRtcCallEvent event) {
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_IGNORE_CHEEK_PRESSES);
-    callScreen.setActiveCall(event.getRecipient(),
-                             getString(R.string.RedPhone_connected),
-                             event.getExtra());
+    callScreen.setActiveCall(event.getRecipient(), getString(R.string.RedPhone_connected), "");
   }
 
   private void handleConnectingToInitiator(@NonNull WebRtcCallEvent event) {
@@ -237,39 +239,9 @@ public class WebRtcCallActivity extends Activity {
     delayedFinish();
   }
 
-  private void handleClientFailure(final @NonNull WebRtcCallEvent event) {
-    callScreen.setActiveCall(event.getRecipient(), getString(R.string.RedPhone_client_failed));
-    if( event.getExtra() != null && !isFinishing() ) {
-      AlertDialog.Builder ad = new AlertDialog.Builder(this);
-      ad.setTitle(R.string.RedPhone_fatal_error);
-      ad.setMessage(event.getExtra());
-      ad.setCancelable(false);
-      ad.setPositiveButton(android.R.string.ok, new OnClickListener() {
-        public void onClick(DialogInterface dialog, int arg) {
-          WebRtcCallActivity.this.handleTerminate(event.getRecipient());
-        }
-      });
-      ad.show();
-    }
-  }
-
   private void handleLoginFailed(@NonNull WebRtcCallEvent event) {
     callScreen.setActiveCall(event.getRecipient(), getString(R.string.RedPhone_login_failed));
     delayedFinish();
-  }
-
-  private void handleServerMessage(final @NonNull WebRtcCallEvent event) {
-    if( isFinishing() ) return; //we're already shutting down, this might crash
-    AlertDialog.Builder ad = new AlertDialog.Builder(this);
-    ad.setTitle(R.string.RedPhone_message_from_the_server);
-    ad.setMessage(event.getExtra());
-    ad.setCancelable(false);
-    ad.setPositiveButton(android.R.string.ok, new OnClickListener() {
-      public void onClick(DialogInterface dialog, int arg) {
-        WebRtcCallActivity.this.handleTerminate(event.getRecipient());
-      }
-    });
-    ad.show();
   }
 
   private void handleNoSuchUser(final @NonNull WebRtcCallEvent event) {
@@ -294,14 +266,39 @@ public class WebRtcCallActivity extends Activity {
     dialog.show();
   }
 
-  private void handleRemoteVideoDisabled(WebRtcCallEvent event) {
+  private void handleRemoteVideoDisabled(@NonNull WebRtcCallEvent event) {
     callScreen.setRemoteVideoEnabled(false);
   }
 
-  private void handleRemoteVideoEnabled(WebRtcCallEvent event) {
+  private void handleRemoteVideoEnabled(@NonNull WebRtcCallEvent event) {
     callScreen.setRemoteVideoEnabled(true);
   }
 
+  private void handleUntrustedIdentity(@NonNull WebRtcCallEvent event) {
+    final IdentityKey theirIdentity = (IdentityKey)event.getExtra();
+    final Recipient   recipient     = event.getRecipient();
+
+    callScreen.setUntrustedIdentity(recipient, theirIdentity);
+    callScreen.setAcceptIdentityListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        IdentityDatabase identityDatabase = DatabaseFactory.getIdentityDatabase(WebRtcCallActivity.this);
+        identityDatabase.saveIdentity(recipient.getRecipientId(), theirIdentity);
+
+        Intent intent = new Intent(WebRtcCallActivity.this, WebRtcCallService.class);
+        intent.putExtra(WebRtcCallService.EXTRA_REMOTE_NUMBER, recipient.getNumber());
+        intent.setAction(WebRtcCallService.ACTION_OUTGOING_CALL);
+        startService(intent);
+      }
+    });
+
+    callScreen.setCancelIdentityButton(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        handleTerminate(recipient);
+      }
+    });
+  }
 
   private void delayedFinish() {
     delayedFinish(STANDARD_DELAY_FINISH);
@@ -327,16 +324,15 @@ public class WebRtcCallActivity extends Activity {
       case CONNECTING_TO_INITIATOR: handleConnectingToInitiator(event);    break;
       case CALL_RINGING:            handleCallRinging(event);              break;
       case CALL_DISCONNECTED:       handleTerminate(event.getRecipient()); break;
-      case SERVER_MESSAGE:          handleServerMessage(event);            break;
       case NO_SUCH_USER:            handleNoSuchUser(event);               break;
       case RECIPIENT_UNAVAILABLE:   handleRecipientUnavailable(event);     break;
       case INCOMING_CALL:           handleIncomingCall(event);             break;
       case OUTGOING_CALL:           handleOutgoingCall(event);             break;
       case CALL_BUSY:               handleCallBusy(event);                 break;
       case LOGIN_FAILED:            handleLoginFailed(event);              break;
-      case CLIENT_FAILURE:			    handleClientFailure(event);            break;
       case REMOTE_VIDEO_DISABLED:   handleRemoteVideoDisabled(event);      break;
       case REMOTE_VIDEO_ENABLED:    handleRemoteVideoEnabled(event);       break;
+      case UNTRUSTED_IDENTITY:      handleUntrustedIdentity(event);        break;
     }
   }
 

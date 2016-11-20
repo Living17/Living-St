@@ -17,7 +17,6 @@ import android.util.Pair;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.thoughtcrime.redphone.audio.IncomingRinger;
-import org.thoughtcrime.securesms.webrtc.audio.OutgoingRinger;
 import org.thoughtcrime.redphone.call.LockManager;
 import org.thoughtcrime.redphone.pstn.CallStateView;
 import org.thoughtcrime.redphone.pstn.IncomingPstnCallListener;
@@ -26,9 +25,6 @@ import org.thoughtcrime.redphone.util.AudioUtils;
 import org.thoughtcrime.redphone.util.UncaughtExceptionHandlerManager;
 import org.thoughtcrime.securesms.ApplicationContext;
 import org.thoughtcrime.securesms.WebRtcCallActivity;
-import org.thoughtcrime.securesms.webrtc.PeerConnectionFactoryOptions;
-import org.thoughtcrime.securesms.webrtc.PeerConnectionWrapper;
-import org.thoughtcrime.securesms.webrtc.PeerConnectionWrapper.PeerConnectionException;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.dependencies.InjectableType;
 import org.thoughtcrime.securesms.dependencies.TextSecureCommunicationModule.TextSecureMessageSenderFactory;
@@ -41,10 +37,14 @@ import org.thoughtcrime.securesms.util.FutureTaskListener;
 import org.thoughtcrime.securesms.util.ListenableFutureTask;
 import org.thoughtcrime.securesms.util.ServiceUtil;
 import org.thoughtcrime.securesms.util.Util;
+import org.thoughtcrime.securesms.webrtc.PeerConnectionFactoryOptions;
+import org.thoughtcrime.securesms.webrtc.PeerConnectionWrapper;
+import org.thoughtcrime.securesms.webrtc.PeerConnectionWrapper.PeerConnectionException;
 import org.thoughtcrime.securesms.webrtc.WebRtcDataProtos;
 import org.thoughtcrime.securesms.webrtc.WebRtcDataProtos.Connected;
 import org.thoughtcrime.securesms.webrtc.WebRtcDataProtos.Data;
 import org.thoughtcrime.securesms.webrtc.WebRtcDataProtos.Hangup;
+import org.thoughtcrime.securesms.webrtc.audio.OutgoingRinger;
 import org.webrtc.AudioTrack;
 import org.webrtc.DataChannel;
 import org.webrtc.EglBase;
@@ -59,6 +59,7 @@ import org.webrtc.VideoRenderer;
 import org.webrtc.VideoTrack;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
+import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.calls.AnswerMessage;
 import org.whispersystems.signalservice.api.messages.calls.BusyMessage;
 import org.whispersystems.signalservice.api.messages.calls.HangupMessage;
@@ -133,14 +134,15 @@ public class WebRtcCallService extends Service implements InjectableType, CallSt
   private OutgoingRinger             outgoingRinger;
   private LockManager                lockManager;
 
-  @Nullable private Long                  callId;
-  @Nullable private Recipient             recipient;
-  @Nullable private PeerConnectionWrapper peerConnection;
-  @Nullable private DataChannel           dataChannel;
+  @Nullable private Long                   callId;
+  @Nullable private Recipient              recipient;
+  @Nullable private PeerConnectionWrapper  peerConnection;
+  @Nullable private DataChannel            dataChannel;
+  @Nullable private List<IceUpdateMessage> pendingIceUpdates;
 
-  @Nullable public static SurfaceViewRenderer localRenderer;
-  @Nullable public static SurfaceViewRenderer remoteRenderer;
-  @Nullable private static EglBase            eglBase;
+  @Nullable public  static SurfaceViewRenderer localRenderer;
+  @Nullable public  static SurfaceViewRenderer remoteRenderer;
+  @Nullable private static EglBase             eglBase;
 
   private ExecutorService serviceExecutor = Executors.newSingleThreadExecutor();
   private ExecutorService networkExecutor = Executors.newSingleThreadExecutor();
@@ -243,7 +245,6 @@ public class WebRtcCallService extends Service implements InjectableType, CallSt
           listenableFutureTask.addListener(new FailureListener<Boolean>(WebRtcCallService.this.callState, WebRtcCallService.this.callId) {
             @Override
             public void onFailureContinue(Throwable error) {
-              // TODO UntrustedIdentityException
               Log.w(TAG, error);
               terminate();
             }
@@ -262,9 +263,10 @@ public class WebRtcCallService extends Service implements InjectableType, CallSt
     if (callState != CallState.STATE_IDLE) throw new IllegalStateException("Dialing from non-idle?");
 
     try {
-      this.callState = CallState.STATE_DIALING;
-      this.recipient = getRemoteRecipient(intent);
-      this.callId    = SecureRandom.getInstance("SHA1PRNG").nextLong();
+      this.callState         = CallState.STATE_DIALING;
+      this.recipient         = getRemoteRecipient(intent);
+      this.callId            = SecureRandom.getInstance("SHA1PRNG").nextLong();
+      this.pendingIceUpdates = new LinkedList<>();
 
       initializeVideo();
 
@@ -293,10 +295,12 @@ public class WebRtcCallService extends Service implements InjectableType, CallSt
             listenableFutureTask.addListener(new FailureListener<Boolean>(callState, callId) {
               @Override
               public void onFailureContinue(Throwable error) {
-                // TODO UntrustedIdentityException
-
                 Log.w(TAG, error);
-                if (error instanceof IOException) sendMessage(WebRtcCallEvent.Type.SERVER_FAILURE, recipient, null);
+                if (error instanceof IOException) {
+                  sendMessage(WebRtcCallEvent.Type.SERVER_FAILURE, recipient, null);
+                } else if (error instanceof UntrustedIdentityException) {
+                  sendMessage(WebRtcCallEvent.Type.UNTRUSTED_IDENTITY, recipient, ((UntrustedIdentityException)error).getIdentityKey());
+                }
 
                 terminate();
               }
@@ -321,11 +325,26 @@ public class WebRtcCallService extends Service implements InjectableType, CallSt
         return;
       }
 
-      if (peerConnection == null) {
+      if (peerConnection == null || pendingIceUpdates == null) {
         throw new AssertionError("assert");
       }
 
+      if (!pendingIceUpdates.isEmpty()) {
+        ListenableFutureTask<Boolean> listenableFutureTask = sendMessage(recipient, SignalServiceCallMessage.forIceUpdates(pendingIceUpdates));
+
+        listenableFutureTask.addListener(new FailureListener<Boolean>(callState, callId) {
+          @Override
+          public void onFailureContinue(Throwable error) {
+            Log.w(TAG, error);
+            sendMessage(WebRtcCallEvent.Type.SERVER_FAILURE, recipient, null);
+
+            terminate();
+          }
+        });
+      }
+
       this.peerConnection.setRemoteDescription(new SessionDescription(SessionDescription.Type.ANSWER, intent.getStringExtra(EXTRA_REMOTE_DESCRIPTION)));
+      this.pendingIceUpdates = null;
     } catch (PeerConnectionException e) {
       Log.w(TAG, e);
       terminate();
@@ -351,19 +370,22 @@ public class WebRtcCallService extends Service implements InjectableType, CallSt
       throw new AssertionError("assert");
     }
 
-    String sdpMid        = intent.getStringExtra(EXTRA_ICE_SDP_MID);
-    int    sdpMLineIndex = intent.getIntExtra(EXTRA_ICE_SDP_LINE_INDEX, 0);
-    String sdp           = intent.getStringExtra(EXTRA_ICE_SDP);
+    IceUpdateMessage iceUpdateMessage = new IceUpdateMessage(this.callId, intent.getStringExtra(EXTRA_ICE_SDP_MID),
+                                                             intent.getIntExtra(EXTRA_ICE_SDP_LINE_INDEX, 0),
+                                                             intent.getStringExtra(EXTRA_ICE_SDP));
 
-    ListenableFutureTask<Boolean> listenableFutureTask = sendMessage(recipient, SignalServiceCallMessage.forIceUpdate(new IceUpdateMessage(this.callId, sdpMid, sdpMLineIndex, sdp)));
+    if (pendingIceUpdates != null) {
+      this.pendingIceUpdates.add(iceUpdateMessage);
+      return;
+    }
+
+    ListenableFutureTask<Boolean> listenableFutureTask = sendMessage(recipient, SignalServiceCallMessage.forIceUpdate(iceUpdateMessage));
 
     listenableFutureTask.addListener(new FailureListener<Boolean>(callState, callId) {
       @Override
       public void onFailureContinue(Throwable error) {
-        // TODO UntrustedIdentityException
-
         Log.w(TAG, error);
-        if (error instanceof IOException) sendMessage(WebRtcCallEvent.Type.SERVER_FAILURE, recipient, null);
+        sendMessage(WebRtcCallEvent.Type.SERVER_FAILURE, recipient, null);
 
         terminate();
       }
@@ -647,20 +669,21 @@ public class WebRtcCallService extends Service implements InjectableType, CallSt
 
     shutdownAudio();
 
-    this.callState    = CallState.STATE_IDLE;
-    this.recipient    = null;
-    this.callId       = null;
-    this.audioEnabled = false;
-    this.videoEnabled = false;
+    this.callState         = CallState.STATE_IDLE;
+    this.recipient         = null;
+    this.callId            = null;
+    this.audioEnabled      = false;
+    this.videoEnabled      = false;
+    this.pendingIceUpdates = null;
     lockManager.updatePhoneState(LockManager.PhoneState.IDLE);
   }
 
 
   private void sendMessage(@NonNull WebRtcCallEvent.Type type,
                            @NonNull Recipient recipient,
-                           @Nullable String error)
+                           @Nullable Object extra)
   {
-    EventBus.getDefault().postSticky(new WebRtcCallEvent(type, recipient, error));
+    EventBus.getDefault().postSticky(new WebRtcCallEvent(type, recipient, extra));
   }
 
   private ListenableFutureTask<Boolean> sendMessage(@NonNull final Recipient recipient,
@@ -727,7 +750,7 @@ public class WebRtcCallService extends Service implements InjectableType, CallSt
     Log.w(TAG, "onIceConnectionChange:" + newState);
 
     if (newState == PeerConnection.IceConnectionState.CONNECTED ||
-        newState == PeerConnection.IceConnectionState.CONNECTED)
+        newState == PeerConnection.IceConnectionState.COMPLETED)
     {
       Intent intent = new Intent(this, WebRtcCallService.class);
       intent.setAction(ACTION_ICE_CONNECTED);
