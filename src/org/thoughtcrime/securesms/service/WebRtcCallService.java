@@ -5,6 +5,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
@@ -661,6 +662,12 @@ public class WebRtcCallService extends Service implements InjectableType, CallSt
     Log.d(TAG, "request STREAM_VOICE_CALL transient audio focus");
     audioManager.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL,
                                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+
+    if (Build.VERSION.SDK_INT >= 11) {
+      audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+    } else {
+      audioManager.setMode(AudioManager.MODE_IN_CALL);
+    }
   }
 
   private void initializeVideo() {
