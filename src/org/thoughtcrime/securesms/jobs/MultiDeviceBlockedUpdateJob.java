@@ -9,7 +9,7 @@ import org.thoughtcrime.securesms.database.RecipientPreferenceDatabase.BlockedRe
 import org.thoughtcrime.securesms.dependencies.InjectableType;
 import org.thoughtcrime.securesms.dependencies.SignalCommunicationModule.SignalMessageSenderFactory;
 import org.thoughtcrime.securesms.jobs.requirements.MasterSecretRequirement;
-import org.thoughtcrime.securesms.recipients.Recipients;
+import org.thoughtcrime.securesms.recipients.Recipient;
 import org.whispersystems.jobqueue.JobParameters;
 import org.whispersystems.jobqueue.requirements.NetworkRequirement;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
@@ -50,12 +50,10 @@ public class MultiDeviceBlockedUpdateJob extends MasterSecretJob implements Inje
     BlockedReader               reader        = database.readerForBlocked(database.getBlocked());
     List<String>                blocked       = new LinkedList<>();
 
-    Recipients recipients;
+    Recipient recipient;
 
-    while ((recipients = reader.getNext()) != null) {
-      if (recipients.isSingleRecipient()) {
-        blocked.add(recipients.getPrimaryRecipient().getAddress().toPhoneString());
-      }
+    while ((recipient = reader.getNext()) != null) {
+      blocked.add(recipient.getAddress().toPhoneString());
     }
 
     messageSender.sendMessage(SignalServiceSyncMessage.forBlocked(new BlockedListMessage(blocked)));
