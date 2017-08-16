@@ -153,7 +153,7 @@ class RecipientProvider {
     }
 
     if (STATIC_DETAILS.containsKey(address.serialize())) return STATIC_DETAILS.get(address.serialize());
-    else                                                 return new RecipientDetails(null, null, null, ContactPhotoFactory.getDefaultContactPhoto(null), preferences.orNull(), null);
+    else                                                 return new RecipientDetails(null, null, null, ContactPhotoFactory.getSignalAvatarContactPhoto(context, address, null, context.getResources().getDimensionPixelSize(R.dimen.contact_photo_target_size)), preferences.orNull(), null);
   }
 
   private @NonNull RecipientDetails getGroupRecipientDetails(Context context, Address groupId, Optional<GroupRecord> groupRecord, Optional<RecipientsPreferences> preferences, boolean asynchronous) {
@@ -197,6 +197,7 @@ class RecipientProvider {
               public final boolean         blocked;
               public final int             expireMessages;
     @NonNull  public final List<Recipient> participants;
+    @Nullable public final String          profileName;
 
     public RecipientDetails(@Nullable String name, @Nullable String customLabel,
                             @Nullable Uri contactUri, @NonNull ContactPhoto avatar,
@@ -213,6 +214,7 @@ class RecipientProvider {
       this.blocked        = preferences != null && preferences.isBlocked();
       this.expireMessages = preferences  != null ? preferences.getExpireMessages() : 0;
       this.participants   = participants == null ? new LinkedList<Recipient>() : participants;
+      this.profileName    = preferences != null ? preferences.getProfileName() : null;
 
       if (name == null && preferences != null) this.name = preferences.getSystemDisplayName();
       else                                     this.name = name;
