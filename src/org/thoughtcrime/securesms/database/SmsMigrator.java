@@ -22,15 +22,18 @@ import android.database.sqlite.SQLiteException;
 import android.net.Uri;
 import androidx.annotation.Nullable;
 
+import com.annimon.stream.Stream;
+
 import net.sqlcipher.database.SQLiteDatabase;
 import net.sqlcipher.database.SQLiteStatement;
 
 import org.thoughtcrime.securesms.logging.Log;
+import org.thoughtcrime.securesms.phonenumbers.PhoneNumberFormatter;
 import org.thoughtcrime.securesms.recipients.Recipient;
+import org.thoughtcrime.securesms.recipients.RecipientId;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
 
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -85,11 +88,9 @@ public class SmsMigrator {
            ourType == MmsSmsColumns.Types.BASE_SENT_FAILED_TYPE;
   }
 
-  private static void getContentValuesForRow(Context context, Cursor cursor,
-                                             long threadId, SQLiteStatement statement)
-  {
-    String theirAddress = cursor.getString(cursor.getColumnIndexOrThrow(SmsDatabase.ADDRESS));
-    statement.bindString(1, Address.fromExternal(context, theirAddress).serialize());
+  private static void getContentValuesForRow(Cursor cursor, long threadId, SQLiteStatement statement) {
+    long theirRecipientId = cursor.getLong(cursor.getColumnIndexOrThrow(SmsDatabase.RECIPIENT_ID));
+    statement.bindLong(1, theirRecipientId);
 
     addIntToStatement(statement, cursor, 2, SmsDatabase.PERSON);
     addIntToStatement(statement, cursor, 3, SmsDatabase.DATE_RECEIVED);
@@ -136,7 +137,7 @@ public class SmsMigrator {
       String address          = getTheirCanonicalAddress(context, theirRecipientId);
 
       if (address != null) {
-        recipientList.add(Recipient.from(context, Address.fromExternal(context, address), true));
+        recipientList.add(Recipient.external(context, address));
       }
     }
 
@@ -170,7 +171,7 @@ public class SmsMigrator {
         int typeColumn = cursor.getColumnIndex(SmsDatabase.TYPE);
 
         if (cursor.isNull(typeColumn) || isAppropriateTypeForMigration(cursor, typeColumn)) {
-          getContentValuesForRow(context, cursor, ourThreadId, statement);
+          getContentValuesForRow(cursor, ourThreadId, statement);
           statement.execute();
         }
 
@@ -212,17 +213,14 @@ public class SmsMigrator {
             long ourThreadId = threadDatabase.getThreadIdFor(ourRecipients.iterator().next());
             migrateConversation(context, listener, progress, theirThreadId, ourThreadId);
           } else if (ourRecipients.size() > 1) {
-            ourRecipients.add(Recipient.from(context, Address.fromSerialized(TextSecurePreferences.getLocalNumber(context)), true));
+            ourRecipients.add(Recipient.self());
 
-            List<Address> memberAddresses = new LinkedList<>();
+            List<RecipientId> recipientIds = Stream.of(ourRecipients).map(Recipient::getId).toList();
 
-            for (Recipient recipient : ourRecipients) {
-              memberAddresses.add(recipient.getAddress());
-            }
-
-            String    ourGroupId        = DatabaseFactory.getGroupDatabase(context).getOrCreateGroupForMembers(memberAddresses, true);
-            Recipient ourGroupRecipient = Recipient.from(context, Address.fromSerialized(ourGroupId), true);
-            long      ourThreadId       = threadDatabase.getThreadIdFor(ourGroupRecipient, ThreadDatabase.DistributionTypes.CONVERSATION);
+            String      ourGroupId          = DatabaseFactory.getGroupDatabase(context).getOrCreateGroupForMembers(recipientIds, true);
+            RecipientId ourGroupRecipientId = DatabaseFactory.getRecipientDatabase(context).getOrInsertFromGroupId(ourGroupId);
+            Recipient   ourGroupRecipient   = Recipient.resolved(ourGroupRecipientId);
+            long        ourThreadId         = threadDatabase.getThreadIdFor(ourGroupRecipient, ThreadDatabase.DistributionTypes.CONVERSATION);
 
             migrateConversation(context, listener, progress, theirThreadId, ourThreadId);
           }
