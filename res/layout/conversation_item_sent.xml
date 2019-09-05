@@ -22,6 +22,17 @@
         android:clipToPadding="false"
         android:clipChildren="false">
 
+        <ImageView
+            android:id="@+id/reply_icon"
+            android:layout_width="@dimen/conversation_item_reply_size"
+            android:layout_height="@dimen/conversation_item_reply_size"
+            android:alpha="0"
+            android:src="@drawable/ic_reply_white_24dp"
+            android:tint="?compose_icon_tint"
+            android:layout_alignTop="@id/body_bubble"
+            android:layout_alignBottom="@id/body_bubble"
+            android:layout_alignStart="@id/body_bubble" />
+
         <LinearLayout
             android:id="@+id/body_bubble"
             android:layout_width="wrap_content"

@@ -24,6 +24,7 @@ import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.net.Uri;
 import androidx.annotation.DimenRes;
@@ -135,6 +136,8 @@ public class ConversationItem extends LinearLayout implements BindableConversati
   private static final int MAX_MEASURE_CALLS       = 3;
   private static final int MAX_BODY_DISPLAY_LENGTH = 1000;
 
+  private static final Rect SWIPE_RECT = new Rect();
+
   private MessageRecord messageRecord;
   private Locale        locale;
   private boolean       groupThread;
@@ -142,6 +145,8 @@ public class ConversationItem extends LinearLayout implements BindableConversati
   private GlideRequests glideRequests;
 
   protected ViewGroup              bodyBubble;
+  protected View                   reply;
+  protected ViewGroup              contactPhotoHolder;
   private   QuoteView              quoteView;
   private   EmojiTextView          bodyText;
   private   ConversationItemFooter footer;
@@ -150,7 +155,6 @@ public class ConversationItem extends LinearLayout implements BindableConversati
   private   TextView               groupSenderProfileName;
   private   View                   groupSenderHolder;
   private   AvatarImageView        contactPhoto;
-  private   ViewGroup              contactPhotoHolder;
   private   AlertView              alertView;
   private   ViewGroup              container;
 
@@ -218,6 +222,7 @@ public class ConversationItem extends LinearLayout implements BindableConversati
     this.groupSenderHolder       =            findViewById(R.id.group_sender_holder);
     this.quoteView               =            findViewById(R.id.quote_view);
     this.container               =            findViewById(R.id.container);
+    this.reply                   =            findViewById(R.id.reply_icon);
 
     setOnClickListener(new ClickListener(null));
 
@@ -269,8 +274,21 @@ public class ConversationItem extends LinearLayout implements BindableConversati
   }
 
   @Override
+  protected void onDetachedFromWindow() {
+    ConversationSwipeAnimationHelper.update(this, 0f, 1f);
+    super.onDetachedFromWindow();
+  }
+
+  @Override
   public void setEventListener(@Nullable EventListener eventListener) {
     this.eventListener = eventListener;
+  }
+
+  public boolean disallowSwipe(float downX, float downY) {
+    if (!hasAudio(messageRecord)) return false;
+
+    audioViewStub.get().getSeekBarGlobalVisibleRect(SWIPE_RECT);
+    return SWIPE_RECT.contains((int) downX, (int) downY);
   }
 
   @Override

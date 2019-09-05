@@ -183,6 +183,11 @@ public class ConversationFragment extends Fragment
 
     typingView = (ConversationTypingView) inflater.inflate(R.layout.conversation_typing_view, container, false);
 
+    new ConversationItemSwipeCallback(
+            () -> actionMode,
+            this::handleReplyMessage
+    ).attachToRecyclerView(list);
+
     return view;
   }
 
