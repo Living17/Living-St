@@ -7,4 +7,7 @@ package org.thoughtcrime.securesms.util;
 public class FeatureFlags {
   /** Send support for view-once photos. */
   public static final boolean VIEW_ONCE_SENDING = false;
+
+  /** UUID-related stuff. */
+  public static final boolean UUIDS = true;
 }

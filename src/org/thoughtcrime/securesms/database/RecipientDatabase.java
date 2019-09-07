@@ -2,6 +2,7 @@ package org.thoughtcrime.securesms.database;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Entity;
 import android.database.Cursor;
 import android.net.Uri;
 import android.text.TextUtils;
@@ -26,6 +27,7 @@ import org.whispersystems.libsignal.util.guava.Preconditions;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -477,6 +479,68 @@ public class RecipientDatabase extends Database {
     return results;
   }
 
+  public void setUuids(@NonNull Map<RecipientId, String> ids) {
+    SQLiteDatabase db = databaseHelper.getReadableDatabase();
+    db.beginTransaction();
+
+    try {
+      String        selection = ID + " = ?";
+      String[]      args      = new String[1];
+      ContentValues values    = new ContentValues(1);
+
+      for (Map.Entry<RecipientId, String> entry : ids.entrySet()) {
+        args[0] = entry.getKey().serialize();
+        values.put(UUID, entry.getValue());
+        db.update(TABLE_NAME, values, selection, args);
+      }
+
+      db.setTransactionSuccessful();
+    } finally {
+      db.endTransaction();
+    }
+  }
+
+  public void markRegistered(@NonNull RecipientId id, @NonNull String uuid) {
+    ContentValues contentValues = new ContentValues(2);
+    contentValues.put(REGISTERED, RegisteredState.REGISTERED.getId());
+    contentValues.put(UUID, uuid);
+    updateOrInsert(id, contentValues);
+    Recipient.live(id).refresh();
+  }
+
+  public void markUnregistered(@NonNull RecipientId id) {
+    ContentValues contentValues = new ContentValues(2);
+    contentValues.put(REGISTERED, RegisteredState.NOT_REGISTERED.getId());
+    contentValues.put(UUID, (String) null);
+    updateOrInsert(id, contentValues);
+    Recipient.live(id).refresh();
+  }
+
+  public void bulkUpdatedRegisteredStatus(@NonNull Map<RecipientId, String> registered, Collection<RecipientId> unregistered) {
+    SQLiteDatabase db = databaseHelper.getWritableDatabase();
+    db.beginTransaction();
+
+    try {
+      for (Map.Entry<RecipientId, String> entry : registered.entrySet()) {
+        ContentValues values = new ContentValues(2);
+        values.put(REGISTERED, RegisteredState.REGISTERED.getId());
+        values.put(UUID, entry.getValue());
+        db.update(TABLE_NAME, values, ID_WHERE, new String[] { entry.getKey().serialize() });
+      }
+
+      for (RecipientId id : unregistered) {
+        ContentValues values = new ContentValues(1);
+        values.put(REGISTERED, RegisteredState.NOT_REGISTERED.getId());
+        db.update(TABLE_NAME, values, ID_WHERE, new String[] { id.serialize() });
+      }
+
+      db.setTransactionSuccessful();
+    } finally {
+      db.endTransaction();
+    }
+  }
+
+  @Deprecated
   public void setRegistered(@NonNull RecipientId id, RegisteredState registeredState) {
     ContentValues contentValues = new ContentValues(1);
     contentValues.put(REGISTERED, registeredState.getId());
@@ -484,8 +548,9 @@ public class RecipientDatabase extends Database {
     Recipient.live(id).refresh();
   }
 
-  public void setRegistered(@NonNull List<RecipientId> activeIds,
-                            @NonNull List<RecipientId> inactiveIds)
+  @Deprecated
+  public void setRegistered(@NonNull Collection<RecipientId> activeIds,
+                            @NonNull Collection<RecipientId> inactiveIds)
   {
     for (RecipientId activeId : activeIds) {
       ContentValues contentValues = new ContentValues(1);
