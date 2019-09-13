@@ -42,6 +42,20 @@ public class SmsMigrator {
 
   private static final String TAG = SmsMigrator.class.getSimpleName();
 
+  private static class SystemColumns {
+    private static final String ADDRESS            = "address";
+    private static final String PERSON             = "person";
+    private static final String DATE_RECEIVED      = "date";
+    private static final String PROTOCOL           = "protocol";
+    private static final String READ               = "read";
+    private static final String STATUS             = "status";
+    private static final String TYPE               = "type";
+    private static final String SUBJECT            = "subject";
+    private static final String REPLY_PATH_PRESENT = "reply_path_present";
+    private static final String BODY               = "body";
+    private static final String SERVICE_CENTER     = "service_center";
+  }
+
   private static void addStringToStatement(SQLiteStatement statement, Cursor cursor,
                                            int index, String key)
   {
@@ -88,21 +102,22 @@ public class SmsMigrator {
            ourType == MmsSmsColumns.Types.BASE_SENT_FAILED_TYPE;
   }
 
-  private static void getContentValuesForRow(Cursor cursor, long threadId, SQLiteStatement statement) {
-    long theirRecipientId = cursor.getLong(cursor.getColumnIndexOrThrow(SmsDatabase.RECIPIENT_ID));
-    statement.bindLong(1, theirRecipientId);
+  private static void getContentValuesForRow(Context context, Cursor cursor, long threadId, SQLiteStatement statement) {
+    String      address = cursor.getString(cursor.getColumnIndexOrThrow(SystemColumns.ADDRESS));
+    RecipientId id      = Recipient.external(context, address).getId();
 
-    addIntToStatement(statement, cursor, 2, SmsDatabase.PERSON);
-    addIntToStatement(statement, cursor, 3, SmsDatabase.DATE_RECEIVED);
-    addIntToStatement(statement, cursor, 4, SmsDatabase.DATE_RECEIVED);
-    addIntToStatement(statement, cursor, 5, SmsDatabase.PROTOCOL);
-    addIntToStatement(statement, cursor, 6, SmsDatabase.READ);
-    addIntToStatement(statement, cursor, 7, SmsDatabase.STATUS);
-    addTranslatedTypeToStatement(statement, cursor, 8, SmsDatabase.TYPE);
-    addIntToStatement(statement, cursor, 9, SmsDatabase.REPLY_PATH_PRESENT);
-    addStringToStatement(statement, cursor, 10, SmsDatabase.SUBJECT);
-    addStringToStatement(statement, cursor, 11, SmsDatabase.BODY);
-    addStringToStatement(statement, cursor, 12, SmsDatabase.SERVICE_CENTER);
+    statement.bindString(1, id.serialize());
+    addIntToStatement(statement, cursor, 2, SystemColumns.PERSON);
+    addIntToStatement(statement, cursor, 3, SystemColumns.DATE_RECEIVED);
+    addIntToStatement(statement, cursor, 4, SystemColumns.DATE_RECEIVED);
+    addIntToStatement(statement, cursor, 5, SystemColumns.PROTOCOL);
+    addIntToStatement(statement, cursor, 6, SystemColumns.READ);
+    addIntToStatement(statement, cursor, 7, SystemColumns.STATUS);
+    addTranslatedTypeToStatement(statement, cursor, 8, SystemColumns.TYPE);
+    addIntToStatement(statement, cursor, 9, SystemColumns.REPLY_PATH_PRESENT);
+    addStringToStatement(statement, cursor, 10, SystemColumns.SUBJECT);
+    addStringToStatement(statement, cursor, 11, SystemColumns.BODY);
+    addStringToStatement(statement, cursor, 12, SystemColumns.SERVICE_CENTER);
 
     statement.bindLong(13, threadId);
   }
@@ -171,7 +186,7 @@ public class SmsMigrator {
         int typeColumn = cursor.getColumnIndex(SmsDatabase.TYPE);
 
         if (cursor.isNull(typeColumn) || isAppropriateTypeForMigration(cursor, typeColumn)) {
-          getContentValuesForRow(cursor, ourThreadId, statement);
+          getContentValuesForRow(context, cursor, ourThreadId, statement);
           statement.execute();
         }
 
