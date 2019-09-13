@@ -7,7 +7,6 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.view.ActionMode;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -24,17 +23,17 @@ class ConversationItemSwipeCallback extends ItemTouchHelper.SimpleCallback {
   private float   latestDownX;
   private float   latestDownY;
 
-  private final ActionModeProvider            actionModeProvider;
+  private final SwipeAvailabilityProvider     swipeAvailabilityProvider;
   private final ConversationItemTouchListener itemTouchListener;
   private final OnSwipeListener               onSwipeListener;
 
-  ConversationItemSwipeCallback(@NonNull ActionModeProvider actionModeProvider,
+  ConversationItemSwipeCallback(@NonNull SwipeAvailabilityProvider swipeAvailabilityProvider,
                                 @NonNull OnSwipeListener onSwipeListener)
   {
     super(0, ItemTouchHelper.END);
-    this.itemTouchListener  = new ConversationItemTouchListener(this::updateLatestDownCoordinate);
-    this.actionModeProvider = actionModeProvider;
-    this.onSwipeListener    = onSwipeListener;
+    this.itemTouchListener         = new ConversationItemTouchListener(this::updateLatestDownCoordinate);
+    this.swipeAvailabilityProvider = swipeAvailabilityProvider;
+    this.onSwipeListener           = onSwipeListener;
   }
 
   void attachToRecyclerView(@NonNull RecyclerView recyclerView) {
@@ -58,8 +57,7 @@ class ConversationItemSwipeCallback extends ItemTouchHelper.SimpleCallback {
   public int getSwipeDirs(@NonNull RecyclerView recyclerView,
                           @NonNull RecyclerView.ViewHolder viewHolder)
   {
-    if (cannotSwipeViewHolder(viewHolder))          return 0;
-    if (actionModeProvider.getActionMode() != null) return 0;
+    if (cannotSwipeViewHolder(viewHolder)) return 0;
     return super.getSwipeDirs(recyclerView, viewHolder);
   }
 
@@ -131,7 +129,8 @@ class ConversationItemSwipeCallback extends ItemTouchHelper.SimpleCallback {
     if (!(viewHolder.itemView instanceof ConversationItem)) return true;
 
     ConversationItem item = ((ConversationItem) viewHolder.itemView);
-    return item.disallowSwipe(latestDownX, latestDownY);
+    return !swipeAvailabilityProvider.isSwipeAvailable(item.getMessageRecord()) ||
+           item.disallowSwipe(latestDownX, latestDownY);
   }
 
   private void updateLatestDownCoordinate(float x, float y) {
@@ -152,8 +151,8 @@ class ConversationItemSwipeCallback extends ItemTouchHelper.SimpleCallback {
     if (vibrator != null) vibrator.vibrate(SWIPE_SUCCESS_VIBE_TIME_MS);
   }
 
-  interface ActionModeProvider {
-    ActionMode getActionMode();
+  interface SwipeAvailabilityProvider {
+    boolean isSwipeAvailable(MessageRecord messageRecord);
   }
 
   interface OnSwipeListener {

@@ -33,7 +33,7 @@
             android:layout_alignBottom="@id/body_bubble"
             android:layout_alignStart="@id/body_bubble" />
 
-        <LinearLayout
+        <org.thoughtcrime.securesms.conversation.ConversationItemBodyBubble
             android:id="@+id/body_bubble"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -175,7 +175,7 @@
                 app:footer_text_color="?conversation_sticker_footer_text_color"
                 app:footer_icon_color="?conversation_sticker_footer_icon_color"/>
 
-        </LinearLayout>
+        </org.thoughtcrime.securesms.conversation.ConversationItemBodyBubble>
 
         <org.thoughtcrime.securesms.components.AlertView
             android:id="@+id/indicators_parent"

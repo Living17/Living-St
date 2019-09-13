@@ -144,19 +144,19 @@ public class ConversationItem extends LinearLayout implements BindableConversati
   private LiveRecipient recipient;
   private GlideRequests glideRequests;
 
-  protected ViewGroup              bodyBubble;
-  protected View                   reply;
-  protected ViewGroup              contactPhotoHolder;
-  private   QuoteView              quoteView;
-  private   EmojiTextView          bodyText;
-  private   ConversationItemFooter footer;
-  private   ConversationItemFooter stickerFooter;
-  private   TextView               groupSender;
-  private   TextView               groupSenderProfileName;
-  private   View                   groupSenderHolder;
-  private   AvatarImageView        contactPhoto;
-  private   AlertView              alertView;
-  private   ViewGroup              container;
+  protected ConversationItemBodyBubble bodyBubble;
+  protected View                       reply;
+  protected ViewGroup                  contactPhotoHolder;
+  private   QuoteView                  quoteView;
+  private   EmojiTextView              bodyText;
+  private   ConversationItemFooter     footer;
+  private   ConversationItemFooter     stickerFooter;
+  private   TextView                   groupSender;
+  private   TextView                   groupSenderProfileName;
+  private   View                       groupSenderHolder;
+  private   AvatarImageView            contactPhoto;
+  private   AlertView                  alertView;
+  private   ViewGroup                  container;
 
   private @NonNull  Set<MessageRecord>              batchSelected = new HashSet<>();
   private @NonNull  Outliner                        outliner      = new Outliner();
@@ -332,16 +332,6 @@ public class ConversationItem extends LinearLayout implements BindableConversati
   }
 
   @Override
-  protected void dispatchDraw(Canvas canvas) {
-    super.dispatchDraw(canvas);
-
-    if (!messageRecord.isOutgoing() && isViewOnceMessage(messageRecord) && ViewOnceUtil.isViewed((MmsMessageRecord) messageRecord)) {
-      outliner.setColor(ThemeUtil.getThemedColor(context, R.attr.conversation_item_sent_text_secondary_color));
-      outliner.draw(canvas, bodyBubble.getTop() + getPaddingTop(), bodyBubble.getRight(), bodyBubble.getBottom() + getPaddingTop(), bodyBubble.getLeft());
-    }
-  }
-
-  @Override
   public void onRecipientChanged(@NonNull Recipient modified) {
     setBubbleState(messageRecord);
     setContactPhoto(recipient.get());
@@ -400,6 +390,9 @@ public class ConversationItem extends LinearLayout implements BindableConversati
       footer.setIconColor(ThemeUtil.getThemedColor(context, R.attr.conversation_item_received_text_secondary_color));
     }
 
+    outliner.setColor(ThemeUtil.getThemedColor(getContext(), R.attr.conversation_item_sent_text_secondary_color));
+    bodyBubble.setOutliner(shouldDrawBodyBubbleOutline(messageRecord) ? outliner : null);
+
     if (audioViewStub.resolved()) {
       setAudioViewTint(messageRecord, this.conversationRecipient.get());
     }
@@ -445,6 +438,10 @@ public class ConversationItem extends LinearLayout implements BindableConversati
       documentViewStub.get().setFocusable(!shouldInterceptClicks(messageRecord) && batchSelected.isEmpty());
       documentViewStub.get().setClickable(batchSelected.isEmpty());
     }
+  }
+
+  private boolean shouldDrawBodyBubbleOutline(MessageRecord messageRecord) {
+    return !messageRecord.isOutgoing() && isViewOnceMessage(messageRecord) && ViewOnceUtil.isViewed((MmsMessageRecord) messageRecord);
   }
 
   private boolean isCaptionlessMms(MessageRecord messageRecord) {
@@ -957,7 +954,7 @@ public class ConversationItem extends LinearLayout implements BindableConversati
   }
 
   private void setGroupAuthorColor(@NonNull MessageRecord messageRecord) {
-    if (!messageRecord.isOutgoing() && isViewOnceMessage(messageRecord) && ViewOnceUtil.isViewed((MmsMessageRecord) messageRecord)) {
+    if (shouldDrawBodyBubbleOutline(messageRecord)) {
       groupSender.setTextColor(ThemeUtil.getThemedColor(context, R.attr.conversation_sticker_author_color));
       groupSenderProfileName.setTextColor(ThemeUtil.getThemedColor(context, R.attr.conversation_sticker_author_color));
     } else if (hasSticker(messageRecord)) {
