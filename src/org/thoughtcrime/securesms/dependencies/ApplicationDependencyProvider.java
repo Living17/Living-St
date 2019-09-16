@@ -101,7 +101,12 @@ public class ApplicationDependencyProvider implements ApplicationDependencies.Pr
     }
 
     @Override
-    public String getUser() {
+    public String getUuid() {
+      return TextSecurePreferences.getLocalUuid(context);
+    }
+
+    @Override
+    public String getE164() {
       return TextSecurePreferences.getLocalNumber(context);
     }
 

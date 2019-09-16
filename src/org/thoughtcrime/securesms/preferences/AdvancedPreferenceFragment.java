@@ -14,6 +14,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.CheckBoxPreference;
 import androidx.preference.Preference;
+
+import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.logging.Log;
 import android.widget.Toast;
 
@@ -184,7 +186,7 @@ public class AdvancedPreferenceFragment extends CorrectedPreferenceFragment {
       protected Integer doInBackground(Void... params) {
         try {
           Context                     context        = getActivity();
-          SignalServiceAccountManager accountManager = AccountManagerFactory.createManager(context);
+          SignalServiceAccountManager accountManager = ApplicationDependencies.getSignalServiceAccountManager();
 
           try {
             accountManager.setGcmId(Optional.<String>absent());

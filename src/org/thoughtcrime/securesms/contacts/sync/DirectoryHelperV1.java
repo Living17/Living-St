@@ -28,6 +28,7 @@ import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.database.MessagingDatabase.InsertResult;
 import org.thoughtcrime.securesms.database.RecipientDatabase;
 import org.thoughtcrime.securesms.database.RecipientDatabase.RegisteredState;
+import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.jobs.MultiDeviceContactUpdateJob;
 import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.notifications.MessageNotifier;
@@ -63,7 +64,7 @@ class DirectoryHelperV1 {
     if (TextUtils.isEmpty(TextSecurePreferences.getLocalNumber(context))) return;
     if (!Permissions.hasAll(context, Manifest.permission.WRITE_CONTACTS)) return;
 
-    List<RecipientId> newlyActiveUsers = refreshDirectory(context, AccountManagerFactory.createManager(context));
+    List<RecipientId> newlyActiveUsers = refreshDirectory(context, ApplicationDependencies.getSignalServiceAccountManager());
 
     if (TextSecurePreferences.isMultiDevice(context)) {
       ApplicationContext.getInstance(context)
@@ -109,7 +110,7 @@ class DirectoryHelperV1 {
   @WorkerThread
   static RegisteredState refreshDirectoryFor(@NonNull Context context, @NonNull Recipient recipient) throws IOException {
     RecipientDatabase           recipientDatabase = DatabaseFactory.getRecipientDatabase(context);
-    SignalServiceAccountManager accountManager    = AccountManagerFactory.createManager(context);
+    SignalServiceAccountManager accountManager    = ApplicationDependencies.getSignalServiceAccountManager();
     Future<RegisteredState>     legacyRequest     = getLegacyRegisteredState(context, accountManager, recipientDatabase, recipient);
 
     try {

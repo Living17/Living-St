@@ -71,6 +71,7 @@ public class TextSecurePreferences {
   private static final String MMS_CUSTOM_USER_AGENT            = "pref_custom_mms_user_agent";
   private static final String THREAD_TRIM_ENABLED              = "pref_trim_threads";
   private static final String LOCAL_NUMBER_PREF                = "pref_local_number";
+  private static final String LOCAL_UUID_PREF                  = "pref_local_uuid";
   private static final String VERIFYING_STATE_PREF             = "pref_verifying";
   public  static final String REGISTERED_GCM_PREF              = "pref_gcm_registered";
   private static final String GCM_PASSWORD_PREF                = "pref_gcm_password";
@@ -168,7 +169,8 @@ public class TextSecurePreferences {
   private static final String NEEDS_MESSAGE_PULL = "pref_needs_message_pull";
 
   private static final String UNIDENTIFIED_ACCESS_CERTIFICATE_ROTATION_TIME_PREF = "pref_unidentified_access_certificate_rotation_time";
-  private static final String UNIDENTIFIED_ACCESS_CERTIFICATE                    = "pref_unidentified_access_certificate";
+  private static final String UNIDENTIFIED_ACCESS_CERTIFICATE_LEGACY             = "pref_unidentified_access_certificate";
+  private static final String UNIDENTIFIED_ACCESS_CERTIFICATE                    = "pref_unidentified_access_certificate_uuid";
   public  static final String UNIVERSAL_UNIDENTIFIED_ACCESS                      = "pref_universal_unidentified_access";
   public  static final String SHOW_UNIDENTIFIED_DELIVERY_INDICATORS              = "pref_show_unidentifed_delivery_indicators";
   private static final String UNIDENTIFIED_DELIVERY_ENABLED                      = "pref_unidentified_delivery_enabled";
@@ -572,10 +574,21 @@ public class TextSecurePreferences {
   }
 
   public static byte[] getUnidentifiedAccessCertificate(Context context) {
+    return parseCertificate(getStringPreference(context, UNIDENTIFIED_ACCESS_CERTIFICATE, null));
+  }
+
+  public static void setUnidentifiedAccessCertificateLegacy(Context context, byte[] value) {
+    setStringPreference(context, UNIDENTIFIED_ACCESS_CERTIFICATE_LEGACY, Base64.encodeBytes(value));
+  }
+
+  public static byte[] getUnidentifiedAccessCertificateLegacy(Context context) {
+    return parseCertificate(getStringPreference(context, UNIDENTIFIED_ACCESS_CERTIFICATE_LEGACY, null));
+  }
+
+  private static byte[] parseCertificate(String raw) {
     try {
-      String result = getStringPreference(context, UNIDENTIFIED_ACCESS_CERTIFICATE, null);
-      if (result != null) {
-        return Base64.decode(result);
+      if (raw != null) {
+        return Base64.decode(raw);
       }
     } catch (IOException e) {
       Log.w(TAG, e);
@@ -646,6 +659,14 @@ public class TextSecurePreferences {
 
   public static void setLocalNumber(Context context, String localNumber) {
     setStringPreference(context, LOCAL_NUMBER_PREF, localNumber);
+  }
+
+  public static String getLocalUuid(Context context) {
+    return getStringPreference(context, LOCAL_UUID_PREF, null);
+  }
+
+  public static void setLocalUuid(Context context, String localNumber) {
+    setStringPreference(context, LOCAL_UUID_PREF, localNumber);
   }
 
   public static String getPushServerPassword(Context context) {

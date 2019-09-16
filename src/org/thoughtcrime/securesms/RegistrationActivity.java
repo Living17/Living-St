@@ -59,7 +59,6 @@ import org.thoughtcrime.securesms.crypto.IdentityKeyUtil;
 import org.thoughtcrime.securesms.crypto.PreKeyUtil;
 import org.thoughtcrime.securesms.crypto.SessionUtil;
 import org.thoughtcrime.securesms.crypto.UnidentifiedAccessUtil;
-import org.thoughtcrime.securesms.database.Address;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.database.IdentityDatabase;
 import org.thoughtcrime.securesms.database.NoExternalStorageException;
@@ -498,7 +497,7 @@ public class RegistrationActivity extends BaseActionBarActivity implements Verif
             fcmToken = Optional.absent();
           }
 
-          accountManager = AccountManagerFactory.createManager(RegistrationActivity.this, e164number, password);
+          accountManager = AccountManagerFactory.createUnauthenticated(RegistrationActivity.this, e164number, password);
 
           Optional<String> pushChallenge = PushChallengeRequest.getPushChallengeBlocking(accountManager, fcmToken, e164number, PUSH_REQUEST_TIMEOUT_MS);
 
@@ -719,13 +718,14 @@ public class RegistrationActivity extends BaseActionBarActivity implements Verif
     TextSecurePreferences.setLocalRegistrationId(RegistrationActivity.this, registrationId);
     SessionUtil.archiveAllSessions(RegistrationActivity.this);
 
-    accountManager.verifyAccountWithCode(code, null, registrationId, !registrationState.gcmToken.isPresent(), pin,
-                                         unidentifiedAccessKey, universalUnidentifiedAccess);
+    String uuid = accountManager.verifyAccountWithCode(code, null, registrationId, !registrationState.gcmToken.isPresent(), pin,
+                                                       unidentifiedAccessKey, universalUnidentifiedAccess);
 
     IdentityKeyPair    identityKey  = IdentityKeyUtil.getIdentityKeyPair(RegistrationActivity.this);
     List<PreKeyRecord> records      = PreKeyUtil.generatePreKeys(RegistrationActivity.this);
     SignedPreKeyRecord signedPreKey = PreKeyUtil.generateSignedPreKey(RegistrationActivity.this, identityKey, true);
 
+    accountManager = AccountManagerFactory.createAuthenticated(this, uuid, registrationState.e164number, registrationState.password);
     accountManager.setPreKeys(identityKey.getPublicKey(), signedPreKey, records);
 
     if (registrationState.gcmToken.isPresent()) {
@@ -735,6 +735,7 @@ public class RegistrationActivity extends BaseActionBarActivity implements Verif
     TextSecurePreferences.setFcmToken(RegistrationActivity.this, registrationState.gcmToken.orNull());
     TextSecurePreferences.setFcmDisabled(RegistrationActivity.this, !registrationState.gcmToken.isPresent());
     TextSecurePreferences.setWebsocketRegistered(RegistrationActivity.this, true);
+    TextSecurePreferences.setLocalUuid(RegistrationActivity.this, uuid);
     TextSecurePreferences.setLocalNumber(RegistrationActivity.this, registrationState.e164number);
 
     DatabaseFactory.getIdentityDatabase(RegistrationActivity.this)
@@ -749,7 +750,7 @@ public class RegistrationActivity extends BaseActionBarActivity implements Verif
     TextSecurePreferences.setPromptedPushRegistration(RegistrationActivity.this, true);
     TextSecurePreferences.setUnauthorizedReceived(RegistrationActivity.this, false);
     DatabaseFactory.getRecipientDatabase(this).setProfileSharing(Recipient.self().getId(), true);
-    DatabaseFactory.getRecipientDatabase(this).setRegistered(Recipient.self().getId(), RecipientDatabase.RegisteredState.REGISTERED);
+    DatabaseFactory.getRecipientDatabase(this).markRegistered(Recipient.self().getId(), uuid);
   }
 
   private void handleSuccessfulRegistration() {

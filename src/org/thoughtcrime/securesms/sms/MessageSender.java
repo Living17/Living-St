@@ -37,6 +37,7 @@ import org.thoughtcrime.securesms.database.SmsDatabase;
 import org.thoughtcrime.securesms.database.ThreadDatabase;
 import org.thoughtcrime.securesms.database.model.MessageRecord;
 import org.thoughtcrime.securesms.database.model.SmsMessageRecord;
+import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.jobmanager.Job;
 import org.thoughtcrime.securesms.jobmanager.JobManager;
 import org.thoughtcrime.securesms.jobs.AttachmentCopyJob;
@@ -334,7 +335,7 @@ public class MessageSender {
       return false;
     } else {
       try {
-        SignalServiceAccountManager   accountManager = AccountManagerFactory.createManager(context);
+        SignalServiceAccountManager   accountManager = ApplicationDependencies.getSignalServiceAccountManager();
         Optional<ContactTokenDetails> registeredUser = accountManager.getContact(destination.requireAddress().serialize());
 
         if (!registeredUser.isPresent()) {

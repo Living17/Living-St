@@ -113,6 +113,7 @@ public class ApplicationContext extends MultiDexApplication implements DefaultLi
   public void onCreate() {
     super.onCreate();
     Log.i(TAG, "onCreate()");
+    Log.i(TAG, "uuid: " + TextSecurePreferences.getLocalUuid(this));
     initializeSecurityProvider();
     initializeLogging();
     initializeCrashHandling();

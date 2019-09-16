@@ -129,8 +129,7 @@ public class ApplicationDependencies {
     @NonNull SignalServiceNetworkAccess provideSignalServiceNetworkAccess();
     @NonNull IncomingMessageProcessor provideIncomingMessageProcessor();
     @NonNull MessageRetriever provideMessageRetriever();
-    @NonNull
-    LiveRecipientCache provideRecipientCache();
+    @NonNull LiveRecipientCache provideRecipientCache();
   }
 
   private static class UninitializedException extends IllegalStateException {
