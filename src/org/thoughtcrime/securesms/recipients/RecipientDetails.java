@@ -22,6 +22,7 @@ import java.util.List;
 public class RecipientDetails {
 
   final Address                address;
+  final String                 uuid;
   final String                 name;
   final String                 customLabel;
   final Uri                    systemContactPhoto;
@@ -62,6 +63,7 @@ public class RecipientDetails {
     this.customLabel                     = settings.getSystemPhoneLabel();
     this.contactUri                      = Util.uri(settings.getSystemContactUri());
     this.address                         = settings.getAddress();
+    this.uuid                            = settings.getUuid();
     this.color                           = settings.getColor();
     this.messageRingtone                 = settings.getMessageRingtone();
     this.callRingtone                    = settings.getCallRingtone();

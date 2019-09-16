@@ -183,6 +183,23 @@ public class RecipientDatabase extends Database {
     super(context, databaseHelper);
   }
 
+  public RecipientId getOrInsertFromUuid(@NonNull String uuid) {
+    SQLiteDatabase db    = databaseHelper.getWritableDatabase();
+    String         query = UUID + " = ?";
+    String[]       args  = new String[] { uuid };
+
+    try (Cursor cursor = db.query(TABLE_NAME, ID_PROJECTION, query, args, null, null, null)) {
+      if (cursor != null && cursor.moveToFirst()) {
+        return RecipientId.from(cursor.getLong(0));
+      } else {
+        ContentValues values = new ContentValues();
+        values.put(UUID, uuid);
+        long id = db.insert(TABLE_NAME, null, values);
+        return RecipientId.from(id);
+      }
+    }
+  }
+
   public RecipientId getOrInsertFromE164(@NonNull String e164) {
     Preconditions.checkNotNull(e164, "Phone number cannot be null.");
 
@@ -276,6 +293,7 @@ public class RecipientDatabase extends Database {
   @NonNull RecipientSettings getRecipientSettings(@NonNull Cursor cursor) {
     long    id                     = cursor.getLong(cursor.getColumnIndexOrThrow(ID));
     Address address                = addressFromCursor(cursor);
+    String  uuid                   = cursor.getString(cursor.getColumnIndexOrThrow(UUID));
     boolean blocked                = cursor.getInt(cursor.getColumnIndexOrThrow(BLOCKED))                == 1;
     String  messageRingtone        = cursor.getString(cursor.getColumnIndexOrThrow(MESSAGE_RINGTONE));
     String  callRingtone           = cursor.getString(cursor.getColumnIndexOrThrow(CALL_RINGTONE));
@@ -318,7 +336,7 @@ public class RecipientDatabase extends Database {
       }
     }
 
-    return new RecipientSettings(RecipientId.from(id), address, blocked, muteUntil,
+    return new RecipientSettings(RecipientId.from(id), address, uuid, blocked, muteUntil,
                                  VibrateState.fromId(messageVibrateState),
                                  VibrateState.fromId(callVibrateState),
                                  Util.uri(messageRingtone), Util.uri(callRingtone),
@@ -738,6 +756,7 @@ public class RecipientDatabase extends Database {
   public static class RecipientSettings {
     private final RecipientId            id;
     private final Address                address;
+    private final String                 uuid;
     private final boolean                blocked;
     private final long                   muteUntil;
     private final VibrateState           messageVibrateState;
@@ -762,7 +781,7 @@ public class RecipientDatabase extends Database {
     private final boolean                forceSmsSelection;
 
     RecipientSettings(@NonNull RecipientId id,
-                      @NonNull Address address, boolean blocked, long muteUntil,
+                      @NonNull Address address, @Nullable String uuid, boolean blocked, long muteUntil,
                       @NonNull VibrateState messageVibrateState,
                       @NonNull VibrateState callVibrateState,
                       @Nullable Uri messageRingtone,
@@ -786,6 +805,7 @@ public class RecipientDatabase extends Database {
     {
       this.id                     = id;
       this.address                = address;
+      this.uuid                   = uuid;
       this.blocked                = blocked;
       this.muteUntil              = muteUntil;
       this.messageVibrateState    = messageVibrateState;
@@ -816,6 +836,10 @@ public class RecipientDatabase extends Database {
 
     public @NonNull Address getAddress() {
       return address;
+    }
+
+    public @Nullable String getUuid() {
+      return uuid;
     }
 
     public @Nullable MaterialColor getColor() {

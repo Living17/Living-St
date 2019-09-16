@@ -40,14 +40,18 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 public class Recipient {
 
   public static final Recipient UNKNOWN = new Recipient(RecipientId.UNKNOWN);
 
+  private static final Pattern UUID_PATTERN = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+
   private final RecipientId            id;
   private final boolean                resolving;
   private final Address                address;
+  private final String                 uuid;
   private final List<Recipient>        participants;
   private final Optional<Long>         groupAvatarId;
   private final boolean                localNumber;
@@ -103,7 +107,9 @@ public class Recipient {
     RecipientDatabase db = DatabaseFactory.getRecipientDatabase(context);
     RecipientId       id = null;
 
-    if (GroupUtil.isEncodedGroup(address)) {
+    if (UUID_PATTERN.matcher(address).matches()) {
+      id = db.getOrInsertFromUuid(address);
+    } else if (GroupUtil.isEncodedGroup(address)) {
       id = db.getOrInsertFromGroupId(address);
     } else if (NumberUtil.isValidEmail(address)) {
       id = db.getOrInsertFromEmail(address);
@@ -123,6 +129,7 @@ public class Recipient {
     this.id                     = id;
     this.resolving              = true;
     this.address                = null;
+    this.uuid                   = null;
     this.participants           = Collections.emptyList();
     this.groupAvatarId          = Optional.absent();
     this.localNumber            = false;
@@ -154,6 +161,7 @@ public class Recipient {
     this.id                     = id;
     this.resolving              = false;
     this.address                = details.address;
+    this.uuid                   = details.uuid;
     this.participants           = details.participants;
     this.groupAvatarId          = details.groupAvatarId;
     this.localNumber            = details.isLocalNumber;
@@ -229,11 +237,23 @@ public class Recipient {
   }
 
   public @NonNull Address requireAddress() {
-    if (resolving) {
-      return resolve().address;
-    } else {
-      return address;
+    Address resolvedAddress = resolving ? resolve().address : address;
+
+    if (resolvedAddress == null) {
+      throw new MissingAddressError();
     }
+
+    return resolvedAddress;
+  }
+
+  public @NonNull String requireUuid() {
+    String resolvedUuid = resolving ? resolve().uuid : uuid;
+
+    if (resolvedUuid == null) {
+      throw new MissingUuidError();
+    }
+
+    return resolvedUuid;
   }
 
   public @Nullable String getCustomLabel() {
@@ -392,5 +412,11 @@ public class Recipient {
   @Override
   public int hashCode() {
     return Objects.hash(id);
+  }
+
+  private static class MissingUuidError extends AssertionError {
+  }
+
+  private static class MissingAddressError extends AssertionError {
   }
 }
