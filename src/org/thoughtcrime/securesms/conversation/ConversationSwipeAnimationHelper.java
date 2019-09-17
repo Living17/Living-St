@@ -1,5 +1,6 @@
 package org.thoughtcrime.securesms.conversation;
 
+import android.animation.ValueAnimator;
 import android.content.res.Resources;
 import android.view.View;
 import android.view.animation.Interpolator;
@@ -11,13 +12,20 @@ import org.thoughtcrime.securesms.util.Util;
 
 final class ConversationSwipeAnimationHelper {
 
-  private static final float PROGRESS_SCALE_FACTOR = 2.0f;
+  public static final float PROGRESS_TRIGGER_POINT = 0.375f;
+
+  private static final float PROGRESS_SCALE_FACTOR          = 2.0f;
+  private static final float SCALED_PROGRESS_TRIGGER_POINT  = PROGRESS_TRIGGER_POINT * PROGRESS_SCALE_FACTOR;
+  private static final float REPLY_SCALE_OVERSHOOT          = 1.8f;
+  private static final float REPLY_SCALE_MAX                = 1.2f;
+  private static final float REPLY_SCALE_MIN                = 1f;
+  private static final long  REPLY_SCALE_OVERSHOOT_DURATION = 200;
 
   private static final Interpolator BUBBLE_INTERPOLATOR           = new ClampingLinearInterpolator(0f, dpToPx(48));
-  private static final Interpolator REPLY_ALPHA_INTERPOLATOR      = new ClampingLinearInterpolator(0.45f, 0.75f);
+  private static final Interpolator REPLY_ALPHA_INTERPOLATOR      = new ClampingAccelerateInterpolator(0f, 1f);
   private static final Interpolator REPLY_TRANSITION_INTERPOLATOR = new ClampingLinearInterpolator(0f, dpToPx(10));
   private static final Interpolator AVATAR_INTERPOLATOR           = new ClampingLinearInterpolator(0f, dpToPx(8));
-  private static final Interpolator REPLY_SCALE_INTERPOLATOR      = new OverShootZoomInterpolator();
+  private static final Interpolator REPLY_SCALE_INTERPOLATOR      = new ClampingLinearInterpolator(REPLY_SCALE_MIN, REPLY_SCALE_MAX);
 
   private ConversationSwipeAnimationHelper() {
   }
@@ -29,20 +37,26 @@ final class ConversationSwipeAnimationHelper {
     updateContactPhotoHolderTransition(conversationItem.contactPhotoHolder, scaledProgress, sign);
   }
 
+  public static void trigger(@NonNull ConversationItem conversationItem) {
+    triggerReplyIcon(conversationItem.reply);
+  }
+
   private static void updateBodyBubbleTransition(@NonNull View bodyBubble, float progress, float sign) {
     bodyBubble.setTranslationX(BUBBLE_INTERPOLATOR.getInterpolation(progress) * sign);
   }
 
   private static void updateReplyIconTransition(@NonNull View replyIcon, float progress, float sign) {
-    if (progress > 0.05f)
+    if (progress > 0.05f) {
       replyIcon.setAlpha(REPLY_ALPHA_INTERPOLATOR.getInterpolation(progress));
-    else replyIcon.setAlpha(0f);
+    } else replyIcon.setAlpha(0f);
 
     replyIcon.setTranslationX(REPLY_TRANSITION_INTERPOLATOR.getInterpolation(progress) * sign);
 
-    float scale = REPLY_SCALE_INTERPOLATOR.getInterpolation(progress);
-    replyIcon.setScaleX(scale);
-    replyIcon.setScaleY(scale);
+    if (progress < SCALED_PROGRESS_TRIGGER_POINT) {
+      float scale = REPLY_SCALE_INTERPOLATOR.getInterpolation(progress);
+      replyIcon.setScaleX(scale);
+      replyIcon.setScaleY(scale);
+    }
   }
 
   private static void updateContactPhotoHolderTransition(@Nullable View contactPhotoHolder,
@@ -51,6 +65,16 @@ final class ConversationSwipeAnimationHelper {
   {
     if (contactPhotoHolder == null) return;
     contactPhotoHolder.setTranslationX(AVATAR_INTERPOLATOR.getInterpolation(progress) * sign);
+  }
+
+  private static void triggerReplyIcon(@NonNull View replyIcon) {
+    ValueAnimator animator = ValueAnimator.ofFloat(REPLY_SCALE_MAX, REPLY_SCALE_OVERSHOOT, REPLY_SCALE_MAX);
+    animator.setDuration(REPLY_SCALE_OVERSHOOT_DURATION);
+    animator.addUpdateListener(animation -> {
+      replyIcon.setScaleX((float) animation.getAnimatedValue());
+      replyIcon.setScaleY((float) animation.getAnimatedValue());
+    });
+    animator.start();
   }
 
   private static int dpToPx(int dp) {
@@ -77,18 +101,23 @@ final class ConversationSwipeAnimationHelper {
     }
   }
 
-  private static final class OverShootZoomInterpolator implements Interpolator {
+  private static final class ClampingAccelerateInterpolator implements Interpolator {
+
+    private final float slope;
+    private final float yIntercept;
+    private final float max;
+    private final float min;
+
+    ClampingAccelerateInterpolator(float start, float end) {
+      slope      = (end - start);
+      yIntercept = start;
+      max        = Math.max(start, end);
+      min        = Math.min(start, end);
+    }
 
     @Override
     public float getInterpolation(float input) {
-      if (input < 0.5) return 1f;
-
-      float tension = 6;
-
-      float t         = (input - 0.5f) * 2f - 1f;
-      float overshoot = t * t * ((tension + 1) * t + tension) + 1.0f;
-
-      return 1f + overshoot * 0.2f;
+      return Util.clamp(slope * ((float) Math.pow(input + (1f - SCALED_PROGRESS_TRIGGER_POINT), 3.0f)) + yIntercept, min, max);
     }
   }
 
