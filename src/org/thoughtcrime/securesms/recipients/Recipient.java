@@ -34,6 +34,8 @@ import org.thoughtcrime.securesms.phonenumbers.PhoneNumberFormatter;
 import org.thoughtcrime.securesms.util.GroupUtil;
 import org.thoughtcrime.securesms.util.Util;
 import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.libsignal.util.guava.Preconditions;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -77,6 +79,7 @@ public class Recipient {
   private final String                 notificationChannel;
   private final UnidentifiedAccessMode unidentifiedAccessMode;
   private final boolean                forceSmsSelection;
+  private final boolean                uuidSupported;
 
 
   /**
@@ -99,22 +102,85 @@ public class Recipient {
   }
 
   /**
-   * Returns a fully-populated {@link Recipient} based off of a string identifier, creating one in
-   * the database if necessary. The identifier may be a phone number, email, or serialized groupId.
+   * Returns a fully-populated {@link Recipient} based off of a {@link SignalServiceAddress},
+   * creating one in the database if necessary. Convenience overload of
+   * {@link #externalPush(Context, String, String)}
    */
   @WorkerThread
-  public static @NonNull Recipient external(@NonNull Context context, @NonNull String address) {
+  public static @NonNull Recipient externalPush(@NonNull Context context, @NonNull SignalServiceAddress signalServiceAddress) {
+    return externalPush(context, signalServiceAddress.getUuid().orNull(), signalServiceAddress.getNumber().orNull());
+  }
+
+  /**
+   * Returns a fully-populated {@link Recipient} based off of a UUID and phone number, creating one
+   * in the database if necessary. We want both piece of information so we're able to associate them
+   * both together, depending on which are available.
+   *
+   * In particular, while we'll eventually get the UUID of a user created via a phone number
+   * (through a directory sync), the only way we can store the phone number is by retrieving it from
+   * sent messages and whatnot. So we should store it when available.
+   */
+  @WorkerThread
+  public static @NonNull Recipient externalPush(@NonNull Context context, @Nullable String uuid, @Nullable String e164) {
+    RecipientDatabase     db       = DatabaseFactory.getRecipientDatabase(context);
+    Optional<RecipientId> uuidUser = uuid != null ? db.getByUuid(uuid) : Optional.absent();
+    Optional<RecipientId> e164User = e164 != null ? db.getByE164(e164) : Optional.absent();
+
+    if (uuidUser.isPresent()) {
+      Recipient resolved = resolved(uuidUser.get());
+
+      if (e164 != null && !resolved.getE164().isPresent()) {
+        db.setPhoneNumber(uuidUser.get(), e164);
+      }
+
+      return resolved;
+    } else if (e164User.isPresent()) {
+      Recipient resolved = resolved(uuidUser.get());
+
+      if (uuid != null && !resolved.getUuid().isPresent()) {
+        db.markRegistered(e164User.get(), uuid);
+      }
+
+      return resolved;
+    } else if (uuid != null) {
+      RecipientId id = db.getOrInsertFromUuid(uuid);
+
+      if (e164 != null) {
+        db.setPhoneNumber(id, e164);
+      }
+
+      return resolved(id);
+    } else if (e164 != null) {
+      return resolved(db.getOrInsertFromE164(e164));
+    } else {
+      throw new AssertionError("You must provide either a UUID or phone number!");
+    }
+  }
+
+  /**
+   * Returns a fully-populated {@link Recipient} based off of a string identifier, creating one in
+   * the database if necessary. The identifier may be a uuid, phone number, email,
+   * or serialized groupId.
+   *
+   * If the identifier is a UUID of a Signal user, prefer using
+   * {@link #externalPush(Context, String, String)} or its overload, as this will let us associate
+   * the phone number with the recipient.
+   */
+  @WorkerThread
+  public static @NonNull Recipient external(@NonNull Context context, @NonNull String identifier) {
+    Preconditions.checkNotNull(identifier, "Address cannot be null!");
+
     RecipientDatabase db = DatabaseFactory.getRecipientDatabase(context);
     RecipientId       id = null;
 
-    if (UUID_PATTERN.matcher(address).matches()) {
-      id = db.getOrInsertFromUuid(address);
-    } else if (GroupUtil.isEncodedGroup(address)) {
-      id = db.getOrInsertFromGroupId(address);
-    } else if (NumberUtil.isValidEmail(address)) {
-      id = db.getOrInsertFromEmail(address);
+    if (UUID_PATTERN.matcher(identifier).matches()) {
+      id = db.getOrInsertFromUuid(identifier);
+    } else if (GroupUtil.isEncodedGroup(identifier)) {
+      id = db.getOrInsertFromGroupId(identifier);
+    } else if (NumberUtil.isValidEmail(identifier)) {
+      id = db.getOrInsertFromEmail(identifier);
     } else {
-      String e164 = PhoneNumberFormatter.get(context).format(address);
+      String e164 = PhoneNumberFormatter.get(context).format(identifier);
       id = db.getOrInsertFromE164(e164);
     }
 
@@ -155,6 +221,7 @@ public class Recipient {
     this.notificationChannel    = null;
     this.unidentifiedAccessMode = UnidentifiedAccessMode.DISABLED;
     this.forceSmsSelection      = false;
+    this.uuidSupported          = false;
   }
 
   Recipient(@NonNull RecipientId id, @NonNull RecipientDetails details) {
@@ -187,6 +254,7 @@ public class Recipient {
     this.notificationChannel    = details.notificationChannel;
     this.unidentifiedAccessMode = details.unidentifiedAccessMode;
     this.forceSmsSelection      = details.forceSmsSelection;
+    this.uuidSupported          = details.uuidSuported;
   }
 
   public @NonNull RecipientId getId() {
@@ -236,6 +304,10 @@ public class Recipient {
     else                         return ContactColors.UNKNOWN_COLOR;
   }
 
+  public @NonNull Optional<String> getE164() {
+    return address != null ? Optional.of(address.toPhoneString()) : Optional.absent();
+  }
+
   public @NonNull Address requireAddress() {
     Address resolvedAddress = resolving ? resolve().address : address;
 
@@ -246,6 +318,10 @@ public class Recipient {
     return resolvedAddress;
   }
 
+  public @NonNull Optional<String> getUuid() {
+    return Optional.fromNullable(uuid);
+  }
+
   public @NonNull String requireUuid() {
     String resolvedUuid = resolving ? resolve().uuid : uuid;
 
@@ -254,6 +330,10 @@ public class Recipient {
     }
 
     return resolvedUuid;
+  }
+
+  public boolean hasUuid() {
+    return !TextUtils.isEmpty(uuid);
   }
 
   public @Nullable String getCustomLabel() {
@@ -371,6 +451,15 @@ public class Recipient {
 
   public boolean isForceSmsSelection() {
     return forceSmsSelection;
+  }
+
+  /**
+   * @return True if this recipient can support receiving UUID-only messages, otherwise false.
+   */
+  public boolean isUuidSupported() {
+    // TODO [greyson] Don't merge this
+//    return uuidSupported;
+    return true;
   }
 
   public @Nullable byte[] getProfileKey() {

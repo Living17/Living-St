@@ -96,16 +96,20 @@ final class V1GroupManager {
       RecipientId groupRecipientId = DatabaseFactory.getRecipientDatabase(context).getOrInsertFromGroupId(groupId);
       Recipient   groupRecipient   = Recipient.resolved(groupRecipientId);
 
-      List<String> numbers = new LinkedList<>();
+      List<GroupContext.Member> addresses = new LinkedList<>();
 
       for (RecipientId member : members) {
-        numbers.add(Recipient.resolved(member).requireAddress().serialize());
+        Recipient recipient = Recipient.resolved(member);
+        addresses.add(GroupContext.Member.newBuilder()
+                                         .setUuid(recipient.requireUuid())
+                                         .setE164(recipient.getE164().orNull())
+                                         .build());
       }
 
       GroupContext.Builder groupContextBuilder = GroupContext.newBuilder()
                                                              .setId(ByteString.copyFrom(GroupUtil.getDecodedId(groupId)))
                                                              .setType(GroupContext.Type.UPDATE)
-                                                             .addAllMembers(numbers);
+                                                             .addAllMembers(addresses);
       if (groupName != null) groupContextBuilder.setName(groupName);
       GroupContext groupContext = groupContextBuilder.build();
 

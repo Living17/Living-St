@@ -132,7 +132,7 @@ class DirectoryHelperV2 {
   }
 
   @WorkerThread
-  static RegisteredState refreshDirectoryFor(@NonNull Context context, @NonNull Recipient recipient) throws IOException {
+  static RegisteredState refreshDirectoryFor(@NonNull Context context, @NonNull Recipient recipient, boolean notifyOfNewUsers) throws IOException {
     RecipientDatabase recipientDatabase = DatabaseFactory.getRecipientDatabase(context);
     Set<String>       sanitizedNumbers  = sanitizeNumbers(Collections.singleton(recipient.requireAddress().serialize()));
 
@@ -161,13 +161,13 @@ class DirectoryHelperV2 {
           ApplicationContext.getInstance(context).getJobManager().add(new MultiDeviceContactUpdateJob());
         }
 
-        if (!activeUser && recipient.resolve().isSystemContact()) {
+        if (notifyOfNewUsers && !activeUser && recipient.resolve().isSystemContact()) {
           notifyNewUsers(context, Collections.singletonList(recipient.getId()));
         }
 
         return RegisteredState.REGISTERED;
       } else {
-        recipientDatabase.setRegistered(recipient.getId(), RegisteredState.NOT_REGISTERED);
+        recipientDatabase.markUnregistered(recipient.getId());
         return RegisteredState.NOT_REGISTERED;
       }
     } catch (SignatureException | UnauthenticatedQuoteException | UnauthenticatedResponseException | Quote.InvalidQuoteFormatException e) {

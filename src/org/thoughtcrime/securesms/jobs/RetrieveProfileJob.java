@@ -2,6 +2,8 @@ package org.thoughtcrime.securesms.jobs;
 
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import android.text.TextUtils;
 
 import org.thoughtcrime.securesms.ApplicationContext;
@@ -89,16 +91,17 @@ public class RetrieveProfileJob extends BaseJob {
   }
 
   private void handlePhoneNumberRecipient(Recipient recipient) throws IOException {
+    String                       uuid               = recipient.requireUuid();
     String                       number             = recipient.requireAddress().toPhoneString();
     Optional<UnidentifiedAccess> unidentifiedAccess = getUnidentifiedAccess(recipient);
 
     SignalServiceProfile profile;
 
     try {
-      profile = retrieveProfile(number, unidentifiedAccess);
+      profile = retrieveProfile(uuid, number, unidentifiedAccess);
     } catch (NonSuccessfulResponseCodeException e) {
       if (unidentifiedAccess.isPresent()) {
-        profile = retrieveProfile(number, Optional.absent());
+        profile = retrieveProfile(uuid, number, Optional.absent());
       } else {
         throw e;
       }
@@ -118,7 +121,7 @@ public class RetrieveProfileJob extends BaseJob {
     }
   }
 
-  private SignalServiceProfile retrieveProfile(@NonNull String number, Optional<UnidentifiedAccess> unidentifiedAccess)
+  private SignalServiceProfile retrieveProfile(@NonNull String uuid, @Nullable String number, Optional<UnidentifiedAccess> unidentifiedAccess)
       throws IOException
   {
     SignalServiceMessagePipe authPipe         = IncomingMessageObserver.getPipe();
@@ -128,14 +131,14 @@ public class RetrieveProfileJob extends BaseJob {
 
     if (pipe != null) {
       try {
-        return pipe.getProfile(new SignalServiceAddress(number), unidentifiedAccess);
+        return pipe.getProfile(new SignalServiceAddress(Optional.of(uuid), Optional.fromNullable(number)), unidentifiedAccess);
       } catch (IOException e) {
         Log.w(TAG, e);
       }
     }
 
     SignalServiceMessageReceiver receiver = ApplicationDependencies.getSignalServiceMessageReceiver();
-    return receiver.retrieveProfile(new SignalServiceAddress(number), unidentifiedAccess);
+    return receiver.retrieveProfile(new SignalServiceAddress(Optional.of(uuid), Optional.fromNullable(number)), unidentifiedAccess);
   }
 
   private void setIdentityKey(Recipient recipient, String identityKeyValue) {

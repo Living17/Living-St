@@ -12,12 +12,14 @@ import org.thoughtcrime.securesms.jobmanager.Job;
 import org.thoughtcrime.securesms.jobmanager.impl.NetworkConstraint;
 import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.recipients.Recipient;
+import org.thoughtcrime.securesms.recipients.RecipientUtil;
 import org.thoughtcrime.securesms.util.GroupUtil;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.multidevice.BlockedListMessage;
 import org.whispersystems.signalservice.api.messages.multidevice.SignalServiceSyncMessage;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.PushNetworkException;
 
 import java.io.IOException;
@@ -67,8 +69,8 @@ public class MultiDeviceBlockedUpdateJob extends BaseJob {
     RecipientDatabase database = DatabaseFactory.getRecipientDatabase(context);
 
     try (RecipientReader reader = database.readerForBlocked(database.getBlocked())) {
-      List<String> blockedIndividuals = new LinkedList<>();
-      List<byte[]> blockedGroups      = new LinkedList<>();
+      List<SignalServiceAddress> blockedIndividuals = new LinkedList<>();
+      List<byte[]>               blockedGroups      = new LinkedList<>();
 
       Recipient recipient;
 
@@ -76,7 +78,7 @@ public class MultiDeviceBlockedUpdateJob extends BaseJob {
         if (recipient.isGroup()) {
           blockedGroups.add(GroupUtil.getDecodedId(recipient.requireAddress().toGroupString()));
         } else {
-          blockedIndividuals.add(recipient.requireAddress().serialize());
+          blockedIndividuals.add(RecipientUtil.toSignalServiceAddress(recipient));
         }
       }
 

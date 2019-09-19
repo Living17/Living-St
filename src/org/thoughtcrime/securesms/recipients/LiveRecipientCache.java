@@ -2,6 +2,7 @@ package org.thoughtcrime.securesms.recipients;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.text.TextUtils;
 
 import androidx.annotation.AnyThread;
 import androidx.annotation.NonNull;
@@ -54,7 +55,13 @@ public final class LiveRecipientCache {
 
   synchronized @NonNull Recipient getSelf() {
     if (localRecipientId == null) {
-      localRecipientId = recipientDatabase.getOrInsertFromE164(TextSecurePreferences.getLocalNumber(context));
+      String localUuid = TextSecurePreferences.getLocalUuid(context);
+
+      if (!TextUtils.isEmpty(localUuid)) {
+        localRecipientId = recipientDatabase.getOrInsertFromUuid(localUuid);
+      } else {
+        localRecipientId = recipientDatabase.getOrInsertFromE164(TextSecurePreferences.getLocalNumber(context));
+      }
     }
 
     return getLive(localRecipientId).resolve();

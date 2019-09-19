@@ -34,7 +34,6 @@ import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.notifications.MessageNotifier;
 import org.thoughtcrime.securesms.notifications.NotificationChannels;
 import org.thoughtcrime.securesms.permissions.Permissions;
-import org.thoughtcrime.securesms.push.AccountManagerFactory;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
 import org.thoughtcrime.securesms.sms.IncomingJoinedMessage;
@@ -108,7 +107,7 @@ class DirectoryHelperV1 {
   }
 
   @WorkerThread
-  static RegisteredState refreshDirectoryFor(@NonNull Context context, @NonNull Recipient recipient) throws IOException {
+  static RegisteredState refreshDirectoryFor(@NonNull Context context, @NonNull Recipient recipient, boolean notifyOfNewUsers) throws IOException {
     RecipientDatabase           recipientDatabase = DatabaseFactory.getRecipientDatabase(context);
     SignalServiceAccountManager accountManager    = ApplicationDependencies.getSignalServiceAccountManager();
     Future<RegisteredState>     legacyRequest     = getLegacyRegisteredState(context, accountManager, recipientDatabase, recipient);

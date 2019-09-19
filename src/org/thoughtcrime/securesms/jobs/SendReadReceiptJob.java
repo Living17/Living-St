@@ -14,6 +14,7 @@ import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
+import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
 import org.whispersystems.signalservice.api.crypto.UntrustedIdentityException;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
@@ -87,7 +88,7 @@ public class SendReadReceiptJob extends BaseJob {
 
     Recipient                   recipient      = Recipient.resolved(recipientId);
     SignalServiceMessageSender  messageSender  = ApplicationDependencies.getSignalServiceMessageSender();
-    SignalServiceAddress        remoteAddress  = new SignalServiceAddress(recipient.requireAddress().serialize());
+    SignalServiceAddress        remoteAddress  = new SignalServiceAddress(Optional.of(recipient.requireUuid()), Optional.fromNullable(recipient.getE164().orNull()));
     SignalServiceReceiptMessage receiptMessage = new SignalServiceReceiptMessage(SignalServiceReceiptMessage.Type.READ, messageIds, timestamp);
 
     messageSender.sendReceipt(remoteAddress,

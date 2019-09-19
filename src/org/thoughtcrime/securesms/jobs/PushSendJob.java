@@ -111,9 +111,8 @@ public abstract class PushSendJob extends SendJob {
     return Optional.of(ProfileKeyUtil.getProfileKey(context));
   }
 
-  protected SignalServiceAddress getPushAddress(Address address) {
-    String relay = null;
-    return new SignalServiceAddress(address.toPhoneString(), Optional.fromNullable(relay));
+  protected SignalServiceAddress getPushAddress(@NonNull Recipient recipient) {
+    return new SignalServiceAddress(Optional.of(recipient.requireUuid()), Optional.fromNullable(recipient.getE164().orNull()));
   }
 
   protected List<SignalServiceAttachment> getAttachmentsFor(List<Attachment> parts) {
@@ -260,7 +259,9 @@ public abstract class PushSendJob extends SendJob {
       }
     }
 
-    return Optional.of(new SignalServiceDataMessage.Quote(quoteId, new SignalServiceAddress(Recipient.resolved(quoteAuthor).requireAddress().serialize()), quoteBody, quoteAttachments));
+    Recipient            quoteAuthorRecipient = Recipient.resolved(quoteAuthor);
+    SignalServiceAddress quoteAddress         = new SignalServiceAddress(Optional.of(quoteAuthorRecipient.requireUuid()), Optional.fromNullable(quoteAuthorRecipient.getE164().orNull()));
+    return Optional.of(new SignalServiceDataMessage.Quote(quoteId, quoteAddress, quoteBody, quoteAttachments));
   }
 
   protected Optional<SignalServiceDataMessage.Sticker> getStickerFor(OutgoingMediaMessage message) {
@@ -333,13 +334,14 @@ public abstract class PushSendJob extends SendJob {
   }
 
   protected SignalServiceSyncMessage buildSelfSendSyncMessage(@NonNull Context context, @NonNull SignalServiceDataMessage message, Optional<UnidentifiedAccessPair> syncAccess) {
-    String                localNumber = TextSecurePreferences.getLocalNumber(context);
-    SentTranscriptMessage transcript  = new SentTranscriptMessage(localNumber,
-                                                                  message.getTimestamp(),
-                                                                  message,
-                                                                  message.getExpiresInSeconds(),
-                                                                  Collections.singletonMap(localNumber, syncAccess.isPresent()),
-                                                                  false);
+    String                localNumber  = TextSecurePreferences.getLocalNumber(context);
+    SignalServiceAddress  localAddress = new SignalServiceAddress(Optional.of(TextSecurePreferences.getLocalUuid(context)), Optional.of(localNumber));
+    SentTranscriptMessage transcript   = new SentTranscriptMessage(localAddress,
+                                                                   message.getTimestamp(),
+                                                                   message,
+                                                                   message.getExpiresInSeconds(),
+                                                                   Collections.singletonMap(localAddress, syncAccess.isPresent()),
+                                                                   false);
     return SignalServiceSyncMessage.forSentTranscript(transcript);
   }
 

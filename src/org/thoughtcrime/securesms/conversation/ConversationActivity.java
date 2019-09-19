@@ -1357,7 +1357,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
         if (registeredState == RegisteredState.UNKNOWN) {
           try {
             Log.i(TAG, "Refreshing directory for user: " + recipient.requireAddress().serialize());
-            registeredState = DirectoryHelper.refreshDirectoryFor(context, recipient);
+            registeredState = DirectoryHelper.refreshDirectoryFor(context, recipient, false);
           } catch (IOException e) {
             Log.w(TAG, e);
           }

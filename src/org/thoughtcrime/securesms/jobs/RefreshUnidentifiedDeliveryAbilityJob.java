@@ -51,7 +51,7 @@ public class RefreshUnidentifiedDeliveryAbilityJob extends BaseJob {
   @Override
   public void onRun() throws Exception {
     byte[]               profileKey = ProfileKeyUtil.getProfileKey(context);
-    SignalServiceProfile profile    = retrieveProfile(TextSecurePreferences.getLocalNumber(context));
+    SignalServiceProfile profile    = retrieveProfile(TextSecurePreferences.getLocalUuid(context), TextSecurePreferences.getLocalNumber(context));
 
     boolean enabled = profile.getUnidentifiedAccess() != null && isValidVerifier(profileKey, profile.getUnidentifiedAccess());
 
@@ -68,19 +68,19 @@ public class RefreshUnidentifiedDeliveryAbilityJob extends BaseJob {
     return exception instanceof PushNetworkException;
   }
 
-  private SignalServiceProfile retrieveProfile(@NonNull String number) throws IOException {
+  private SignalServiceProfile retrieveProfile(@NonNull String uuid, @NonNull String number) throws IOException {
     SignalServiceMessageReceiver receiver = ApplicationDependencies.getSignalServiceMessageReceiver();
     SignalServiceMessagePipe     pipe     = IncomingMessageObserver.getPipe();
 
     if (pipe != null) {
       try {
-        return pipe.getProfile(new SignalServiceAddress(number), Optional.absent());
+        return pipe.getProfile(new SignalServiceAddress(Optional.of(uuid), Optional.of(number)), Optional.absent());
       } catch (IOException e) {
         Log.w(TAG, e);
       }
     }
 
-    return receiver.retrieveProfile(new SignalServiceAddress(number), Optional.absent());
+    return receiver.retrieveProfile(new SignalServiceAddress(Optional.of(uuid), Optional.of(number)), Optional.absent());
   }
 
   private boolean isValidVerifier(@NonNull byte[] profileKey, @NonNull String verifier) {

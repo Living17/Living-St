@@ -47,7 +47,7 @@ public class PushDatabase extends Database {
     } else {
       ContentValues values = new ContentValues();
       values.put(TYPE, envelope.getType());
-      values.put(SOURCE, envelope.getSource());
+      values.put(SOURCE, envelope.getSourceIdentifier());
       values.put(DEVICE_ID, envelope.getSourceDevice());
       values.put(LEGACY_MSG, envelope.hasLegacyMessage() ? Base64.encodeBytes(envelope.getLegacyMessage()) : "");
       values.put(CONTENT, envelope.hasContent() ? Base64.encodeBytes(envelope.getContent()) : "");
@@ -112,7 +112,7 @@ public class PushDatabase extends Database {
                                                 DEVICE_ID + " = ? AND " + LEGACY_MSG + " = ? AND " +
                                                 CONTENT + " = ? AND " + TIMESTAMP + " = ?" ,
                               new String[] {String.valueOf(envelope.getType()),
-                                            envelope.getSource(),
+                                            envelope.getSourceIdentifier(),
                                             String.valueOf(envelope.getSourceDevice()),
                                             envelope.hasLegacyMessage() ? Base64.encodeBytes(envelope.getLegacyMessage()) : "",
                                             envelope.hasContent() ? Base64.encodeBytes(envelope.getContent()) : "",

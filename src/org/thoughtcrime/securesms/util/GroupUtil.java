@@ -1,6 +1,8 @@
 package org.thoughtcrime.securesms.util;
 
 import android.content.Context;
+import android.text.TextUtils;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
@@ -105,8 +107,9 @@ public class GroupUtil {
       } else {
         this.members = new LinkedList<>();
 
-        for (String member : groupContext.getMembersList()) {
-          this.members.add(Recipient.external(context, member));
+        for (GroupContext.Member member : groupContext.getMembersList()) {
+          String user = member.hasUuid() && !TextUtils.isEmpty(member.getUuid()) ? member.getUuid() : member.getE164();
+          this.members.add(Recipient.external(context, user));
         }
       }
     }

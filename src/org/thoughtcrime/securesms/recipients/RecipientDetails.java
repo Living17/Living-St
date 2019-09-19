@@ -49,6 +49,7 @@ public class RecipientDetails {
   final String                 notificationChannel;
   final UnidentifiedAccessMode unidentifiedAccessMode;
   final boolean                forceSmsSelection;
+  final boolean                uuidSuported;
 
   RecipientDetails(@NonNull Context context,
                    @Nullable String name,
@@ -85,6 +86,7 @@ public class RecipientDetails {
     this.notificationChannel             = settings.getNotificationChannel();
     this.unidentifiedAccessMode          = settings.getUnidentifiedAccessMode();
     this.forceSmsSelection               = settings.isForceSmsSelection();
+    this.uuidSuported                    = settings.isUuidSupported();
 
     if (name == null) this.name = settings.getSystemDisplayName();
     else              this.name = name;

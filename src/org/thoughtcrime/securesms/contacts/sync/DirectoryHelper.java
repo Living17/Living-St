@@ -23,11 +23,11 @@ public class DirectoryHelper {
   }
 
   @WorkerThread
-  public static RegisteredState refreshDirectoryFor(@NonNull Context context, @NonNull Recipient recipient) throws IOException {
+  public static RegisteredState refreshDirectoryFor(@NonNull Context context, @NonNull Recipient recipient, boolean notifyOfNewUsers) throws IOException {
     if (FeatureFlags.UUIDS) {
-      return DirectoryHelperV2.refreshDirectoryFor(context, recipient);
+      return DirectoryHelperV2.refreshDirectoryFor(context, recipient, notifyOfNewUsers);
     } else {
-      return DirectoryHelperV1.refreshDirectoryFor(context, recipient);
+      return DirectoryHelperV1.refreshDirectoryFor(context, recipient, notifyOfNewUsers);
     }
   }
 }

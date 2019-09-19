@@ -78,8 +78,9 @@ public class SQLCipherOpenHelper extends SQLiteOpenHelper {
   private static final int VIEW_ONCE_ONLY                   = 23;
   private static final int RECIPIENT_IDS                    = 24;
   private static final int RECIPIENT_SEARCH                 = 25;
+  private static final int UUIDS                            = 26;
 
-  private static final int    DATABASE_VERSION = 25;
+  private static final int    DATABASE_VERSION = 26;
   private static final String DATABASE_NAME    = "signal.db";
 
   private final Context        context;
@@ -511,6 +512,10 @@ public class SQLCipherOpenHelper extends SQLiteOpenHelper {
             }
           }
         }
+      }
+
+      if (oldVersion < UUIDS) {
+        db.execSQL("ALTER TABLE recipient ADD COLUMN uuid_supported INTEGER DEFAULT 0");
       }
 
       db.setTransactionSuccessful();

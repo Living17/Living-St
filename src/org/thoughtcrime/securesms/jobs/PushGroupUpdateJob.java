@@ -25,6 +25,8 @@ import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup.Type;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.push.exceptions.PushNetworkException;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos;
+import org.whispersystems.signalservice.internal.push.SignalServiceProtos.GroupContext;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -92,10 +94,11 @@ public class PushGroupUpdateJob extends BaseJob {
                                             .build();
     }
 
-    List<String> members = new LinkedList<>();
+    List<SignalServiceAddress> members = new LinkedList<>();
 
     for (RecipientId member : record.get().getMembers()) {
-      members.add(Recipient.resolved(member).requireAddress().serialize());
+      Recipient recipient = Recipient.resolved(member);
+      members.add(new SignalServiceAddress(Optional.of(recipient.requireUuid()), Optional.fromNullable(recipient.getE164().orNull())));
     }
 
     SignalServiceGroup groupContext = SignalServiceGroup.newBuilder(Type.UPDATE)
@@ -117,7 +120,7 @@ public class PushGroupUpdateJob extends BaseJob {
     SignalServiceMessageSender messageSender = ApplicationDependencies.getSignalServiceMessageSender();
     Recipient                  recipient     = Recipient.resolved(source);
 
-    messageSender.sendMessage(new SignalServiceAddress(recipient.requireAddress().serialize()),
+    messageSender.sendMessage(new SignalServiceAddress(Optional.of(recipient.requireUuid()), Optional.fromNullable(recipient.getE164().orNull())),
                               UnidentifiedAccessUtil.getAccessFor(context, recipient),
                               message);
   }

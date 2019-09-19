@@ -164,7 +164,7 @@ public class PushMediaSendJob extends PushSendJob {
       ApplicationContext.getInstance(context).getJobManager().add(new DirectoryRefreshJob(false));
     } catch (UntrustedIdentityException uie) {
       warn(TAG, "Failure", uie);
-      database.addMismatchedIdentity(messageId, Recipient.external(context, uie.getE164Number()).getId(), uie.getIdentityKey());
+      database.addMismatchedIdentity(messageId, Recipient.external(context, uie.getIdentifier()).getId(), uie.getIdentityKey());
       database.markAsSentFailed(messageId);
     }
   }
@@ -201,7 +201,7 @@ public class PushMediaSendJob extends PushSendJob {
       rotateSenderCertificateIfNecessary();
 
       SignalServiceMessageSender                 messageSender      = ApplicationDependencies.getSignalServiceMessageSender();
-      SignalServiceAddress                       address            = getPushAddress(destination);
+      SignalServiceAddress                       address            = getPushAddress(message.getRecipient());
       List<Attachment>                           attachments        = Stream.of(message.getAttachments()).filterNot(Attachment::isSticker).toList();
       List<SignalServiceAttachment>              serviceAttachments = getAttachmentPointersFor(attachments);
       Optional<byte[]>                           profileKey         = getProfileKey(message.getRecipient());

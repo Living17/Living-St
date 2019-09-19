@@ -1,19 +1,14 @@
 package org.thoughtcrime.securesms.migrations;
 
-import android.content.ContentValues;
 import android.content.Context;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
-import com.annimon.stream.Stream;
-
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
-import org.thoughtcrime.securesms.crypto.MasterSecretUtil;
-import org.thoughtcrime.securesms.database.RecipientDatabase;
 import org.thoughtcrime.securesms.jobmanager.JobManager;
 import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
@@ -21,8 +16,6 @@ import org.thoughtcrime.securesms.util.Util;
 import org.thoughtcrime.securesms.util.VersionTracker;
 
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -45,13 +38,14 @@ public class ApplicationMigrations {
 
   private static final int LEGACY_CANONICAL_VERSION = 455;
 
-  public static final int CURRENT_VERSION = 4;
+  public static final int CURRENT_VERSION = 5;
 
   private static final class Version {
     static final int LEGACY           = 1;
     static final int RECIPIENT_ID     = 2;
     static final int RECIPIENT_SEARCH = 3;
     static final int AVATAR_MIGRATION = 4;
+    static final int UUIDS            = 5;
   }
 
   /**
@@ -178,6 +172,10 @@ public class ApplicationMigrations {
 
     if (lastSeenVersion < Version.AVATAR_MIGRATION) {
       jobs.put(Version.AVATAR_MIGRATION, new AvatarMigrationJob());
+    }
+
+    if (lastSeenVersion < Version.UUIDS) {
+      jobs.put(Version.UUIDS, new UuidMigrationJob());
     }
 
     return jobs;

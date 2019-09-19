@@ -89,8 +89,10 @@ public class TypingSendJob extends BaseJob {
       groupId    = Optional.of(GroupUtil.getDecodedId(recipient.requireAddress().toGroupString()));
     }
 
+    recipients = Stream.of(recipients).map(Recipient::resolve).toList();
+
     SignalServiceMessageSender             messageSender      = ApplicationDependencies.getSignalServiceMessageSender();
-    List<SignalServiceAddress>             addresses          = Stream.of(recipients).map(r -> new SignalServiceAddress(r.requireAddress().serialize())).toList();
+    List<SignalServiceAddress>             addresses          = Stream.of(recipients).map(r -> new SignalServiceAddress(Optional.fromNullable(r.requireUuid()), Optional.fromNullable(r.getE164().orNull()))).toList();
     List<Optional<UnidentifiedAccessPair>> unidentifiedAccess = Stream.of(recipients).map(r -> UnidentifiedAccessUtil.getAccessFor(context, r)).toList();
     SignalServiceTypingMessage             typingMessage      = new SignalServiceTypingMessage(typing ? Action.STARTED : Action.STOPPED, System.currentTimeMillis(), groupId);
 
