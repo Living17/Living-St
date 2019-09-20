@@ -23,6 +23,7 @@ import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.permissions.Permissions;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
+import org.thoughtcrime.securesms.recipients.RecipientUtil;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.util.guava.Optional;
@@ -299,7 +300,7 @@ public class MultiDeviceContactUpdateJob extends BaseJob {
   private Optional<VerifiedMessage> getVerifiedMessage(Recipient recipient, Optional<IdentityDatabase.IdentityRecord> identity) throws InvalidNumberException {
     if (!identity.isPresent()) return Optional.absent();
 
-    SignalServiceAddress destination = new SignalServiceAddress(Optional.of(recipient.requireUuid()), Optional.fromNullable(recipient.requireAddress().toPhoneString()));
+    SignalServiceAddress destination = RecipientUtil.toSignalServiceAddress(context, recipient);
     IdentityKey          identityKey = identity.get().getIdentityKey();
 
     VerifiedMessage.VerifiedState state;

@@ -19,6 +19,7 @@ import org.thoughtcrime.securesms.mms.OutgoingGroupMediaMessage;
 import org.thoughtcrime.securesms.providers.BlobProvider;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
+import org.thoughtcrime.securesms.recipients.RecipientUtil;
 import org.thoughtcrime.securesms.sms.MessageSender;
 import org.thoughtcrime.securesms.util.BitmapUtil;
 import org.thoughtcrime.securesms.util.GroupUtil;
@@ -96,20 +97,19 @@ final class V1GroupManager {
       RecipientId groupRecipientId = DatabaseFactory.getRecipientDatabase(context).getOrInsertFromGroupId(groupId);
       Recipient   groupRecipient   = Recipient.resolved(groupRecipientId);
 
-      List<GroupContext.Member> addresses = new LinkedList<>();
+      List<GroupContext.Member> uuidMembers = new LinkedList<>();
+      List<String>              e164Members = new LinkedList<>();
 
       for (RecipientId member : members) {
         Recipient recipient = Recipient.resolved(member);
-        addresses.add(GroupContext.Member.newBuilder()
-                                         .setUuid(recipient.requireUuid())
-                                         .setE164(recipient.getE164().orNull())
-                                         .build());
+        uuidMembers.add(GroupMessageProcessor.createMember(RecipientUtil.toSignalServiceAddress(context, recipient)));
       }
 
       GroupContext.Builder groupContextBuilder = GroupContext.newBuilder()
                                                              .setId(ByteString.copyFrom(GroupUtil.getDecodedId(groupId)))
                                                              .setType(GroupContext.Type.UPDATE)
-                                                             .addAllMembers(addresses);
+                                                             .addAllMembersE164(e164Members)
+                                                             .addAllMembers(uuidMembers);
       if (groupName != null) groupContextBuilder.setName(groupName);
       GroupContext groupContext = groupContextBuilder.build();
 

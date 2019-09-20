@@ -35,6 +35,7 @@ import org.thoughtcrime.securesms.mms.PartAuthority;
 import org.thoughtcrime.securesms.notifications.MessageNotifier;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
+import org.thoughtcrime.securesms.recipients.RecipientUtil;
 import org.thoughtcrime.securesms.util.Base64;
 import org.thoughtcrime.securesms.util.BitmapDecodingException;
 import org.thoughtcrime.securesms.util.BitmapUtil;
@@ -112,7 +113,7 @@ public abstract class PushSendJob extends SendJob {
   }
 
   protected SignalServiceAddress getPushAddress(@NonNull Recipient recipient) {
-    return new SignalServiceAddress(Optional.of(recipient.requireUuid()), Optional.fromNullable(recipient.getE164().orNull()));
+    return RecipientUtil.toSignalServiceAddress(context, recipient);
   }
 
   protected List<SignalServiceAttachment> getAttachmentsFor(List<Attachment> parts) {
@@ -260,7 +261,7 @@ public abstract class PushSendJob extends SendJob {
     }
 
     Recipient            quoteAuthorRecipient = Recipient.resolved(quoteAuthor);
-    SignalServiceAddress quoteAddress         = new SignalServiceAddress(Optional.of(quoteAuthorRecipient.requireUuid()), Optional.fromNullable(quoteAuthorRecipient.getE164().orNull()));
+    SignalServiceAddress quoteAddress         = RecipientUtil.toSignalServiceAddress(context, quoteAuthorRecipient);
     return Optional.of(new SignalServiceDataMessage.Quote(quoteId, quoteAddress, quoteBody, quoteAttachments));
   }
 

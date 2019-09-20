@@ -38,6 +38,7 @@ import org.thoughtcrime.securesms.notifications.MessageNotifier;
 import org.thoughtcrime.securesms.permissions.Permissions;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
+import org.thoughtcrime.securesms.recipients.RecipientUtil;
 import org.thoughtcrime.securesms.util.FutureTaskListener;
 import org.thoughtcrime.securesms.util.ListenableFutureTask;
 import org.thoughtcrime.securesms.util.ServiceUtil;
@@ -1006,7 +1007,7 @@ public class WebRtcCallService extends Service implements PeerConnection.Observe
     Callable<Boolean> callable = new Callable<Boolean>() {
       @Override
       public Boolean call() throws Exception {
-        messageSender.sendCallMessage(new SignalServiceAddress(Optional.of(recipient.requireUuid()), Optional.fromNullable(recipient.resolve().getE164().orNull())),
+        messageSender.sendCallMessage(RecipientUtil.toSignalServiceAddress(WebRtcCallService.this, recipient),
                                       UnidentifiedAccessUtil.getAccessFor(WebRtcCallService.this, recipient),
                                       callMessage);
         return true;

@@ -96,7 +96,7 @@ public class ConfirmIdentityDialog extends AlertDialog {
         @Override
         protected Void doInBackground(Void... params) {
           synchronized (SESSION_LOCK) {
-            SignalProtocolAddress      mismatchAddress  = new SignalProtocolAddress(Recipient.resolved(recipientId).requireUuid(), 1);
+            SignalProtocolAddress      mismatchAddress  = new SignalProtocolAddress(Recipient.resolved(recipientId).requireServiceIdentifier(), 1);
             TextSecureIdentityKeyStore identityKeyStore = new TextSecureIdentityKeyStore(getContext());
 
             identityKeyStore.saveIdentity(mismatchAddress, mismatch.getIdentityKey(), true);
@@ -168,7 +168,7 @@ public class ConfirmIdentityDialog extends AlertDialog {
             boolean legacy = !messageRecord.isContentBundleKeyExchange();
 
             SignalServiceEnvelope envelope = new SignalServiceEnvelope(SignalServiceProtos.Envelope.Type.PREKEY_BUNDLE_VALUE,
-                                                                       RecipientUtil.toSignalServiceAddress(messageRecord.getIndividualRecipient()),
+                                                                       RecipientUtil.toSignalServiceAddress(getContext(), messageRecord.getIndividualRecipient()),
                                                                        messageRecord.getRecipientDeviceId(),
                                                                        messageRecord.getDateSent(),
                                                                        legacy ? Base64.decode(messageRecord.getBody()) : null,

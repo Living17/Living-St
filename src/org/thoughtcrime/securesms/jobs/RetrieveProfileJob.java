@@ -18,6 +18,7 @@ import org.thoughtcrime.securesms.jobmanager.impl.NetworkConstraint;
 import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
+import org.thoughtcrime.securesms.recipients.RecipientUtil;
 import org.thoughtcrime.securesms.service.IncomingMessageObserver;
 import org.thoughtcrime.securesms.util.Base64;
 import org.thoughtcrime.securesms.util.IdentityUtil;
@@ -91,17 +92,16 @@ public class RetrieveProfileJob extends BaseJob {
   }
 
   private void handlePhoneNumberRecipient(Recipient recipient) throws IOException {
-    String                       uuid               = recipient.requireUuid();
-    String                       number             = recipient.requireAddress().toPhoneString();
+    SignalServiceAddress         address            = RecipientUtil.toSignalServiceAddress(context, recipient);
     Optional<UnidentifiedAccess> unidentifiedAccess = getUnidentifiedAccess(recipient);
 
     SignalServiceProfile profile;
 
     try {
-      profile = retrieveProfile(uuid, number, unidentifiedAccess);
+      profile = retrieveProfile(address, unidentifiedAccess);
     } catch (NonSuccessfulResponseCodeException e) {
       if (unidentifiedAccess.isPresent()) {
-        profile = retrieveProfile(uuid, number, Optional.absent());
+        profile = retrieveProfile(address, Optional.absent());
       } else {
         throw e;
       }
@@ -121,7 +121,7 @@ public class RetrieveProfileJob extends BaseJob {
     }
   }
 
-  private SignalServiceProfile retrieveProfile(@NonNull String uuid, @Nullable String number, Optional<UnidentifiedAccess> unidentifiedAccess)
+  private SignalServiceProfile retrieveProfile(@NonNull SignalServiceAddress address, Optional<UnidentifiedAccess> unidentifiedAccess)
       throws IOException
   {
     SignalServiceMessagePipe authPipe         = IncomingMessageObserver.getPipe();
@@ -131,14 +131,14 @@ public class RetrieveProfileJob extends BaseJob {
 
     if (pipe != null) {
       try {
-        return pipe.getProfile(new SignalServiceAddress(Optional.of(uuid), Optional.fromNullable(number)), unidentifiedAccess);
+        return pipe.getProfile(address, unidentifiedAccess);
       } catch (IOException e) {
         Log.w(TAG, e);
       }
     }
 
     SignalServiceMessageReceiver receiver = ApplicationDependencies.getSignalServiceMessageReceiver();
-    return receiver.retrieveProfile(new SignalServiceAddress(Optional.of(uuid), Optional.fromNullable(number)), unidentifiedAccess);
+    return receiver.retrieveProfile(address, unidentifiedAccess);
   }
 
   private void setIdentityKey(Recipient recipient, String identityKeyValue) {

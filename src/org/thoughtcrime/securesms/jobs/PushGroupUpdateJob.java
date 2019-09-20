@@ -14,6 +14,7 @@ import org.thoughtcrime.securesms.jobmanager.impl.NetworkConstraint;
 import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
+import org.thoughtcrime.securesms.recipients.RecipientUtil;
 import org.thoughtcrime.securesms.util.GroupUtil;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
@@ -98,7 +99,7 @@ public class PushGroupUpdateJob extends BaseJob {
 
     for (RecipientId member : record.get().getMembers()) {
       Recipient recipient = Recipient.resolved(member);
-      members.add(new SignalServiceAddress(Optional.of(recipient.requireUuid()), Optional.fromNullable(recipient.getE164().orNull())));
+      members.add(RecipientUtil.toSignalServiceAddress(context, recipient));
     }
 
     SignalServiceGroup groupContext = SignalServiceGroup.newBuilder(Type.UPDATE)
@@ -120,7 +121,7 @@ public class PushGroupUpdateJob extends BaseJob {
     SignalServiceMessageSender messageSender = ApplicationDependencies.getSignalServiceMessageSender();
     Recipient                  recipient     = Recipient.resolved(source);
 
-    messageSender.sendMessage(new SignalServiceAddress(Optional.of(recipient.requireUuid()), Optional.fromNullable(recipient.getE164().orNull())),
+    messageSender.sendMessage(RecipientUtil.toSignalServiceAddress(context, recipient),
                               UnidentifiedAccessUtil.getAccessFor(context, recipient),
                               message);
   }

@@ -8,6 +8,7 @@ import org.thoughtcrime.securesms.jobmanager.Data;
 import org.thoughtcrime.securesms.jobmanager.Job;
 import org.thoughtcrime.securesms.jobmanager.impl.NetworkConstraint;
 import org.thoughtcrime.securesms.recipients.RecipientId;
+import org.thoughtcrime.securesms.recipients.RecipientUtil;
 import org.thoughtcrime.securesms.util.GroupUtil;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.whispersystems.libsignal.util.guava.Optional;
@@ -79,7 +80,7 @@ public class RequestGroupInfoJob extends BaseJob {
     SignalServiceMessageSender messageSender = ApplicationDependencies.getSignalServiceMessageSender();
     Recipient                  recipient     = Recipient.resolved(source);
 
-    messageSender.sendMessage(new SignalServiceAddress(Optional.fromNullable(recipient.requireUuid()), Optional.fromNullable(recipient.getE164().orNull())),
+    messageSender.sendMessage(RecipientUtil.toSignalServiceAddress(context, recipient),
                               UnidentifiedAccessUtil.getAccessFor(context, recipient),
                               message);
   }

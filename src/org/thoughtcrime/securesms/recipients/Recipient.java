@@ -135,7 +135,7 @@ public class Recipient {
 
       return resolved;
     } else if (e164User.isPresent()) {
-      Recipient resolved = resolved(uuidUser.get());
+      Recipient resolved = resolved(e164User.get());
 
       if (uuid != null && !resolved.getUuid().isPresent()) {
         db.markRegistered(e164User.get(), uuid);
@@ -298,10 +298,10 @@ public class Recipient {
   }
 
   public @NonNull MaterialColor getColor() {
-    if      (isGroup()) return MaterialColor.GROUP;
-    else if (color != null)      return color;
-    else if (name != null)       return ContactColors.generateFor(name);
-    else                         return ContactColors.UNKNOWN_COLOR;
+    if      (isGroup())     return MaterialColor.GROUP;
+    else if (color != null) return color;
+    else if (name != null)  return ContactColors.generateFor(name);
+    else                    return ContactColors.UNKNOWN_COLOR;
   }
 
   public @NonNull Optional<String> getE164() {
@@ -322,18 +322,9 @@ public class Recipient {
     return Optional.fromNullable(uuid);
   }
 
-  public @NonNull String requireUuid() {
-    String resolvedUuid = resolving ? resolve().uuid : uuid;
-
-    if (resolvedUuid == null) {
-      throw new MissingUuidError();
-    }
-
-    return resolvedUuid;
-  }
-
-  public boolean hasUuid() {
-    return !TextUtils.isEmpty(uuid);
+  public @NonNull String requireServiceIdentifier() {
+    Recipient resolved = resolving ? resolve() : this;
+    return resolved.getUuid().or(requireAddress().serialize());
   }
 
   public @Nullable String getCustomLabel() {
@@ -501,9 +492,6 @@ public class Recipient {
   @Override
   public int hashCode() {
     return Objects.hash(id);
-  }
-
-  private static class MissingUuidError extends AssertionError {
   }
 
   private static class MissingAddressError extends AssertionError {

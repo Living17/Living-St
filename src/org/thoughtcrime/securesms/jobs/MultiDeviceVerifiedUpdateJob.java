@@ -13,6 +13,7 @@ import org.thoughtcrime.securesms.crypto.UnidentifiedAccessUtil;
 import org.thoughtcrime.securesms.database.Address;
 import org.thoughtcrime.securesms.database.IdentityDatabase.VerifiedStatus;
 import org.thoughtcrime.securesms.recipients.RecipientId;
+import org.thoughtcrime.securesms.recipients.RecipientUtil;
 import org.thoughtcrime.securesms.util.Base64;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
@@ -102,7 +103,7 @@ public class MultiDeviceVerifiedUpdateJob extends BaseJob {
       SignalServiceMessageSender    messageSender        = ApplicationDependencies.getSignalServiceMessageSender();
       Recipient                     recipient            = Recipient.resolved(destination);
       VerifiedMessage.VerifiedState verifiedState        = getVerifiedState(verifiedStatus);
-      SignalServiceAddress          verifiedAddress      = new SignalServiceAddress(Optional.of(recipient.requireUuid()), Optional.fromNullable(recipient.getE164().orNull()));
+      SignalServiceAddress          verifiedAddress      = RecipientUtil.toSignalServiceAddress(context, recipient);
       VerifiedMessage               verifiedMessage      = new VerifiedMessage(verifiedAddress, new IdentityKey(identityKey, 0), verifiedState, timestamp);
 
       messageSender.sendMessage(SignalServiceSyncMessage.forVerified(verifiedMessage),

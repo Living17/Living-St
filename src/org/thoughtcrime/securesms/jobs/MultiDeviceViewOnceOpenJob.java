@@ -79,7 +79,7 @@ public class MultiDeviceViewOnceOpenJob extends BaseJob {
 
     SignalServiceMessageSender messageSender = ApplicationDependencies.getSignalServiceMessageSender();
     Recipient                  recipient     = Recipient.resolved(RecipientId.from(messageId.recipientId));
-    ViewOnceOpenMessage        openMessage   = new ViewOnceOpenMessage(RecipientUtil.toSignalServiceAddress(recipient), messageId.timestamp);
+    ViewOnceOpenMessage        openMessage   = new ViewOnceOpenMessage(RecipientUtil.toSignalServiceAddress(context, recipient), messageId.timestamp);
 
     messageSender.sendMessage(SignalServiceSyncMessage.forViewOnceOpen(openMessage), UnidentifiedAccessUtil.getAccessForSync(context));
   }

@@ -78,7 +78,7 @@ public class MultiDeviceBlockedUpdateJob extends BaseJob {
         if (recipient.isGroup()) {
           blockedGroups.add(GroupUtil.getDecodedId(recipient.requireAddress().toGroupString()));
         } else {
-          blockedIndividuals.add(RecipientUtil.toSignalServiceAddress(recipient));
+          blockedIndividuals.add(RecipientUtil.toSignalServiceAddress(context, recipient));
         }
       }
 

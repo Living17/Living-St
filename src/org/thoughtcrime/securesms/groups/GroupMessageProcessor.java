@@ -22,6 +22,7 @@ import org.thoughtcrime.securesms.mms.OutgoingGroupMediaMessage;
 import org.thoughtcrime.securesms.notifications.MessageNotifier;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
+import org.thoughtcrime.securesms.recipients.RecipientUtil;
 import org.thoughtcrime.securesms.sms.IncomingGroupMessage;
 import org.thoughtcrime.securesms.sms.IncomingTextMessage;
 import org.thoughtcrime.securesms.util.Base64;
@@ -137,10 +138,13 @@ public class GroupMessageProcessor {
 
       for (RecipientId addedMember : addedMembers) {
         Recipient recipient = Recipient.resolved(addedMember);
-        builder.addMembers(GroupContext.Member.newBuilder()
-                                              .setUuid(recipient.requireUuid())
-                                              .setE164(recipient.getE164().orNull())
-                                              .build());
+
+        if (recipient.getE164().isPresent()) {
+          builder.addMembersE164(recipient.getE164().get());
+        }
+
+
+        builder.addMembers(createMember(RecipientUtil.toSignalServiceAddress(context, recipient)));
       }
     } else {
       builder.clearMembers();
@@ -265,15 +269,29 @@ public class GroupMessageProcessor {
     }
 
     if (group.getMembers().isPresent()) {
+      builder.addAllMembersE164(Stream.of(group.getMembers().get())
+                                      .filter(a -> a.getNumber().isPresent())
+                                      .map(a -> a.getNumber().get())
+                                      .toList());
       builder.addAllMembers(Stream.of(group.getMembers().get())
-                                  .map(a -> GroupContext.Member.newBuilder()
-                                                               .setUuid(a.getUuid().orNull())
-                                                               .setE164(a.getNumber().orNull())
-                                                               .build())
+                                  .map(GroupMessageProcessor::createMember)
                                   .toList());
     }
 
     return builder;
   }
 
+  public static GroupContext.Member createMember(SignalServiceAddress address) {
+    GroupContext.Member.Builder member = GroupContext.Member.newBuilder();
+
+    if (address.getUuid().isPresent()) {
+      member = member.setUuid(address.getUuid().get());
+    }
+
+    if (address.getNumber().isPresent()) {
+      member = member.setE164(address.getNumber().get());
+    }
+
+    return member.build();
+  }
 }
