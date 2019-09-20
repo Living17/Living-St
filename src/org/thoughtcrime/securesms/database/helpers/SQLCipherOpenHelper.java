@@ -516,6 +516,7 @@ public class SQLCipherOpenHelper extends SQLiteOpenHelper {
 
       if (oldVersion < UUIDS) {
         db.execSQL("ALTER TABLE recipient ADD COLUMN uuid_supported INTEGER DEFAULT 0");
+        db.execSQL("ALTER TABLE push ADD COLUMN source_uuid TEXT DEFAULT NULL");
       }
 
       db.setTransactionSuccessful();
