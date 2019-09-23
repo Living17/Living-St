@@ -1368,7 +1368,7 @@ public class ConversationItem extends LinearLayout implements BindableConversati
         ApplicationContext.getInstance(context)
                           .getJobManager()
                           .add(new SmsSendJob(context, messageRecord.getId(),
-                                              messageRecord.getIndividualRecipient().requireAddress()));
+                                              messageRecord.getIndividualRecipient()));
       }
     });
 

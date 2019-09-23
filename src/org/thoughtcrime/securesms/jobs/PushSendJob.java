@@ -70,9 +70,9 @@ public abstract class PushSendJob extends SendJob {
     super(parameters);
   }
 
-  protected static Job.Parameters constructParameters(Address destination) {
+  protected static Job.Parameters constructParameters(@NonNull Recipient recipient) {
     return new Parameters.Builder()
-                         .setQueue(destination.serialize())
+                         .setQueue(recipient.getId().toQueueKey())
                          .addConstraint(NetworkConstraint.KEY)
                          .setLifespan(TimeUnit.DAYS.toMillis(1))
                          .setMaxAttempts(Parameters.UNLIMITED)

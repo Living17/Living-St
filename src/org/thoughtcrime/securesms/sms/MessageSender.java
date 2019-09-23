@@ -203,7 +203,7 @@ public class MessageSender {
         } else if (isGroupPushSend(recipient)) {
           messageJobs.add(new PushGroupSendJob(messageId, recipient.getId(), null));
         } else {
-          messageJobs.add(new PushMediaSendJob(messageId, recipient.requireAddress()));
+          messageJobs.add(new PushMediaSendJob(messageId, recipient));
         }
       }
 
@@ -275,12 +275,12 @@ public class MessageSender {
 
   private static void sendTextPush(Context context, Recipient recipient, long messageId) {
     JobManager jobManager = ApplicationContext.getInstance(context).getJobManager();
-    jobManager.add(new PushTextSendJob(messageId, recipient.requireAddress()));
+    jobManager.add(new PushTextSendJob(messageId, recipient));
   }
 
   private static void sendMediaPush(Context context, Recipient recipient, long messageId) {
     JobManager jobManager = ApplicationContext.getInstance(context).getJobManager();
-    PushMediaSendJob.enqueue(context, jobManager, messageId, recipient.requireAddress());
+    PushMediaSendJob.enqueue(context, jobManager, messageId, recipient);
   }
 
   private static void sendGroupPush(Context context, Recipient recipient, long messageId, RecipientId filterRecipientId) {
@@ -290,7 +290,7 @@ public class MessageSender {
 
   private static void sendSms(Context context, Recipient recipient, long messageId) {
     JobManager jobManager = ApplicationContext.getInstance(context).getJobManager();
-    jobManager.add(new SmsSendJob(context, messageId, recipient.requireAddress()));
+    jobManager.add(new SmsSendJob(context, messageId, recipient));
   }
 
   private static void sendMms(Context context, long messageId) {

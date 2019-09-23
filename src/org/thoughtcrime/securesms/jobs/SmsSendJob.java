@@ -40,11 +40,11 @@ public class SmsSendJob extends SendJob {
   private long messageId;
   private int  runAttempt;
 
-  public SmsSendJob(Context context, long messageId, @NonNull Address destination) {
+  public SmsSendJob(Context context, long messageId, @NonNull Recipient destination) {
     this(context, messageId, destination, 0);
   }
 
-  public SmsSendJob(Context context, long messageId, @NonNull Address destination, int runAttempt) {
+  public SmsSendJob(Context context, long messageId, @NonNull Recipient destination, int runAttempt) {
     this(constructParameters(context, destination), messageId, runAttempt);
   }
 
@@ -227,12 +227,12 @@ public class SmsSendJob extends SendJob {
     }
   }
 
-  private static Job.Parameters constructParameters(@NonNull Context context, @NonNull Address destination) {
+  private static Job.Parameters constructParameters(@NonNull Context context, @NonNull Recipient destination) {
     String constraint = TextSecurePreferences.isWifiSmsEnabled(context) ? NetworkOrCellServiceConstraint.KEY
                                                                         : CellServiceConstraint.KEY;
     return new Job.Parameters.Builder()
                              .setMaxAttempts(MAX_ATTEMPTS)
-                             .setQueue(destination.serialize())
+                             .setQueue(destination.getId().toQueueKey())
                              .addConstraint(constraint)
                              .build();
   }

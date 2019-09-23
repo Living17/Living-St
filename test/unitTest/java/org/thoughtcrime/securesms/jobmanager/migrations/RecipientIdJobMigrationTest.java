@@ -273,6 +273,20 @@ public class RecipientIdJobMigrationTest {
     assertEquals(1, converted.getData().getLong("message_id"));
   }
 
+  @Test
+  public void migrate_smsSendJob() throws Exception {
+    JobData testData = new JobData("SmsSendJob", "+16101234567", new Data.Builder().putLong("message_id", 1).putInt("run_attempt", 0).build());
+    mockRecipientResolve("+16101234567", 1);
+
+    RecipientIdJobMigration subject   = new RecipientIdJobMigration(mock(Application.class));
+    JobData                 converted = subject.migrate(testData);
+
+    assertEquals("SmsSendJob", converted.getFactoryKey());
+    assertEquals(RecipientId.from(1).toQueueKey(), converted.getQueueKey());
+    assertEquals(1, converted.getData().getLong("message_id"));
+    assertEquals(0, converted.getData().getInt("run_attempt"));
+  }
+
   private void mockRecipientResolve(String address, long recipientId) throws Exception {
     doReturn(mockRecipient(recipientId)).when(Recipient.class, "external", any(Context.class), eq(address));
   }

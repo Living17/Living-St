@@ -41,6 +41,7 @@ public class RecipientIdJobMigration extends JobMigration {
       case "MultiDeviceReadUpdateJob":     return migrateMultiDeviceReadUpdateJob(jobData);
       case "PushTextSendJob":              return migratePushTextSendJob(jobData);
       case "PushMediaSendJob":             return migratePushMediaSendJob(jobData);
+      case "SmsSendJob":                   return migrateSmsSendJob(jobData);
       default:                             return jobData;
     }
   }
@@ -180,6 +181,12 @@ public class RecipientIdJobMigration extends JobMigration {
   }
 
   private @NonNull JobData migratePushMediaSendJob(@NonNull JobData jobData) {
+    //noinspection ConstantConditions
+    Recipient recipient = Recipient.external(application, jobData.getQueueKey());
+    return jobData.withQueueKey(recipient.getId().toQueueKey());
+  }
+
+  private @NonNull JobData migrateSmsSendJob(@NonNull JobData jobData) {
     //noinspection ConstantConditions
     Recipient recipient = Recipient.external(application, jobData.getQueueKey());
     return jobData.withQueueKey(recipient.getId().toQueueKey());

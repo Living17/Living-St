@@ -55,8 +55,8 @@ public class PushMediaSendJob extends PushSendJob {
 
   private long messageId;
 
-  public PushMediaSendJob(long messageId, Address destination) {
-    this(constructParameters(destination), messageId);
+  public PushMediaSendJob(long messageId, @NonNull Recipient recipient) {
+    this(constructParameters(recipient), messageId);
   }
 
   private PushMediaSendJob(Job.Parameters parameters, long messageId) {
@@ -65,9 +65,9 @@ public class PushMediaSendJob extends PushSendJob {
   }
 
   @WorkerThread
-  public static void enqueue(@NonNull Context context, @NonNull JobManager jobManager, long messageId, @NonNull Address destination) {
+  public static void enqueue(@NonNull Context context, @NonNull JobManager jobManager, long messageId, @NonNull Recipient recipient) {
     try {
-      if (!destination.isPhone()) {
+      if (!recipient.requireAddress().isPhone()) {
         throw new AssertionError();
       }
 
@@ -75,7 +75,7 @@ public class PushMediaSendJob extends PushSendJob {
       OutgoingMediaMessage message                     = database.getOutgoingMessage(messageId);
       JobManager.Chain     compressAndUploadAttachment = createCompressingAndUploadAttachmentsChain(jobManager, message);
 
-      compressAndUploadAttachment.then(new PushMediaSendJob(messageId, destination))
+      compressAndUploadAttachment.then(new PushMediaSendJob(messageId, recipient))
                                  .enqueue();
 
     } catch (NoSuchMessageException | MmsException e) {
