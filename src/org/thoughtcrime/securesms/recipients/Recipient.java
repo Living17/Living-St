@@ -54,6 +54,9 @@ public class Recipient {
   private final boolean                resolving;
   private final Address                address;
   private final String                 uuid;
+  private final String                 e164;
+  private final String                 email;
+  private final String                 groupId;
   private final List<Recipient>        participants;
   private final Optional<Long>         groupAvatarId;
   private final boolean                localNumber;
@@ -229,6 +232,9 @@ public class Recipient {
     this.resolving              = false;
     this.address                = details.address;
     this.uuid                   = details.uuid;
+    this.e164                   = details.address.isPhone() ? details.address.toPhoneString() : null;
+    this.email                  = details.address.isEmail() ? details.address.toEmailString() : null;
+    this.groupId                = details.address.isGroup() ? details.address.toGroupString() : null;
     this.participants           = details.participants;
     this.groupAvatarId          = details.groupAvatarId;
     this.localNumber            = details.isLocalNumber;
@@ -304,12 +310,7 @@ public class Recipient {
     else                    return ContactColors.UNKNOWN_COLOR;
   }
 
-  public @NonNull Optional<String> getE164() {
-    return address != null ? Optional.of(address.toPhoneString()) : Optional.absent();
-  }
-
   public @NonNull Address requireAddress() {
-    Address resolvedAddress = resolving ? resolve().address : address;
 
     if (resolvedAddress == null) {
       throw new MissingAddressError();
@@ -320,6 +321,18 @@ public class Recipient {
 
   public @NonNull Optional<String> getUuid() {
     return Optional.fromNullable(uuid);
+  }
+
+  public @NonNull Optional<String> getE164() {
+    return Optional.fromNullable(e164);
+  }
+
+  public @NonNull Optional<String> getEmail() {
+    return Optional.fromNullable(email);
+  }
+
+  public @NonNull Optional<String> getGroupId() {
+    return Optional.fromNullable(groupId);
   }
 
   public @NonNull String requireServiceIdentifier() {
@@ -348,15 +361,15 @@ public class Recipient {
   }
 
   public boolean isGroup() {
-    return address != null && address.isGroup();
+    return groupId != null;
   }
 
   public boolean isMmsGroup() {
-    return address != null && address.isMmsGroup();
+    return groupId != null && GroupUtil.isMmsGroup(groupId);
   }
 
   public boolean isPushGroup() {
-    return address != null && address.isGroup() && !address.isMmsGroup();
+    return groupId != null && !GroupUtil.isMmsGroup(groupId);
   }
 
   public @NonNull List<Recipient> getParticipants() {
