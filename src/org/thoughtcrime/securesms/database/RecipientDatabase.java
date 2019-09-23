@@ -22,6 +22,7 @@ import org.thoughtcrime.securesms.recipients.RecipientId;
 import org.thoughtcrime.securesms.util.Base64;
 import org.thoughtcrime.securesms.util.Util;
 import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.libsignal.util.guava.Preconditions;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -181,6 +182,8 @@ public class RecipientDatabase extends Database {
   }
 
   public RecipientId getOrInsertFromE164(@NonNull String e164) {
+    Preconditions.checkNotNull(e164, "Phone number cannot be null.");
+
     SQLiteDatabase db    = databaseHelper.getWritableDatabase();
     String         query = PHONE + " = ?";
     String[]       args  = new String[] { e164 };
@@ -198,6 +201,8 @@ public class RecipientDatabase extends Database {
   }
 
   public RecipientId getOrInsertFromEmail(@NonNull String email) {
+    Preconditions.checkNotNull(email, "Email cannot be null.");
+
     SQLiteDatabase db    = databaseHelper.getWritableDatabase();
     String         query = EMAIL + " = ?";
     String[]       args  = new String[] { email };
@@ -215,6 +220,8 @@ public class RecipientDatabase extends Database {
   }
 
   public RecipientId getOrInsertFromGroupId(@NonNull String groupId) {
+    Preconditions.checkNotNull(groupId, "GroupId cannot be null.");
+
     SQLiteDatabase db    = databaseHelper.getWritableDatabase();
     String         query = GROUP_ID + " = ?";
     String[]       args  = new String[] { groupId };
