@@ -245,6 +245,7 @@ android {
 
     buildTypes {
         debug {
+            // TODO [greyson] DO NOT MERGE
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'),
                           'proguard-firebase-messaging.pro',

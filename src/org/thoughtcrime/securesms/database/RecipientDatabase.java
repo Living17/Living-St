@@ -83,11 +83,16 @@ public class RecipientDatabase extends Database {
 
   public  static final String[] SEARCH_PROJECTION = new String[] { ID, SYSTEM_DISPLAY_NAME, SIGNAL_PROFILE_NAME, PHONE, EMAIL, SYSTEM_PHONE_LABEL, SYSTEM_PHONE_TYPE, REGISTERED, "IFNULL(" + SYSTEM_DISPLAY_NAME + ", " + SIGNAL_PROFILE_NAME + ") AS " + SORT_NAME };
 
-  private static Address addressFromCursor(Cursor cursor) {
+  private static @Nullable Address addressFromCursor(Cursor cursor) {
     String  phone   = cursor.getString(cursor.getColumnIndexOrThrow(PHONE));
     String  email   = cursor.getString(cursor.getColumnIndexOrThrow(EMAIL));
     String  groupId = cursor.getString(cursor.getColumnIndexOrThrow(GROUP_ID));
-    return phone != null ? Address.fromSerialized(phone) : email != null ? Address.fromSerialized(email) : Address.fromSerialized(groupId);
+
+    if (phone   != null) return Address.fromSerialized(phone);
+    if (email   != null) return Address.fromSerialized(email);
+    if (groupId != null) return Address.fromSerialized(groupId);
+
+    return null;
   }
 
   static final List<String> TYPED_RECIPIENT_PROJECTION = Stream.of(RECIPIENT_PROJECTION)
@@ -314,8 +319,10 @@ public class RecipientDatabase extends Database {
 
   @NonNull RecipientSettings getRecipientSettings(@NonNull Cursor cursor) {
     long    id                     = cursor.getLong(cursor.getColumnIndexOrThrow(ID));
-    Address address                = addressFromCursor(cursor);
     String  uuid                   = cursor.getString(cursor.getColumnIndexOrThrow(UUID));
+    String  e164                   = cursor.getString(cursor.getColumnIndexOrThrow(PHONE));
+    String  email                  = cursor.getString(cursor.getColumnIndexOrThrow(EMAIL));
+    String  groupId                = cursor.getString(cursor.getColumnIndexOrThrow(GROUP_ID));
     boolean blocked                = cursor.getInt(cursor.getColumnIndexOrThrow(BLOCKED))                == 1;
     String  messageRingtone        = cursor.getString(cursor.getColumnIndexOrThrow(MESSAGE_RINGTONE));
     String  callRingtone           = cursor.getString(cursor.getColumnIndexOrThrow(CALL_RINGTONE));
@@ -359,7 +366,7 @@ public class RecipientDatabase extends Database {
       }
     }
 
-    return new RecipientSettings(RecipientId.from(id), address, uuid, blocked, muteUntil,
+    return new RecipientSettings(RecipientId.from(id), uuid, e164, email, groupId, blocked, muteUntil,
                                  VibrateState.fromId(messageVibrateState),
                                  VibrateState.fromId(callVibrateState),
                                  Util.uri(messageRingtone), Util.uri(callRingtone),
@@ -519,7 +526,10 @@ public class RecipientDatabase extends Database {
 
     try (Cursor cursor = db.query(TABLE_NAME, new String[] { ID, UUID, PHONE, EMAIL, GROUP_ID }, null, null, null, null, null)) {
       while (cursor != null && cursor.moveToNext()) {
-        results.add(addressFromCursor(cursor));
+        Address address = addressFromCursor(cursor);
+        if (address != null) {
+          results.add(address);
+        }
       }
     }
 
@@ -774,8 +784,10 @@ public class RecipientDatabase extends Database {
 
   public static class RecipientSettings {
     private final RecipientId            id;
-    private final Address                address;
     private final String                 uuid;
+    private final String                 e164;
+    private final String                 email;
+    private final String                 groupId;
     private final boolean                blocked;
     private final long                   muteUntil;
     private final VibrateState           messageVibrateState;
@@ -801,7 +813,11 @@ public class RecipientDatabase extends Database {
     private final boolean                uuidSupported;
 
     RecipientSettings(@NonNull RecipientId id,
-                      @NonNull Address address, @Nullable String uuid, boolean blocked, long muteUntil,
+                      @Nullable String uuid,
+                      @Nullable String e164,
+                      @Nullable String email,
+                      @Nullable String groupId,
+                      boolean blocked, long muteUntil,
                       @NonNull VibrateState messageVibrateState,
                       @NonNull VibrateState callVibrateState,
                       @Nullable Uri messageRingtone,
@@ -825,8 +841,10 @@ public class RecipientDatabase extends Database {
                       boolean uuidSupported)
     {
       this.id                     = id;
-      this.address                = address;
       this.uuid                   = uuid;
+      this.e164                   = e164;
+      this.email                  = email;
+      this.groupId                = groupId;
       this.blocked                = blocked;
       this.muteUntil              = muteUntil;
       this.messageVibrateState    = messageVibrateState;
@@ -856,12 +874,20 @@ public class RecipientDatabase extends Database {
       return id;
     }
 
-    public @NonNull Address getAddress() {
-      return address;
-    }
-
     public @Nullable String getUuid() {
       return uuid;
+    }
+
+    public @Nullable String getE164() {
+      return e164;
+    }
+
+    public @Nullable String getEmail() {
+      return email;
+    }
+
+    public @Nullable String getGroupId() {
+      return groupId;
     }
 
     public @Nullable MaterialColor getColor() {

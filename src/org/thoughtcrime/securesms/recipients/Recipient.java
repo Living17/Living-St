@@ -52,7 +52,6 @@ public class Recipient {
 
   private final RecipientId            id;
   private final boolean                resolving;
-  private final Address                address;
   private final String                 uuid;
   private final String                 e164;
   private final String                 email;
@@ -197,8 +196,10 @@ public class Recipient {
   Recipient(@NonNull RecipientId id) {
     this.id                     = id;
     this.resolving              = true;
-    this.address                = null;
     this.uuid                   = null;
+    this.e164                   = null;
+    this.email                  = null;
+    this.groupId                = null;
     this.participants           = Collections.emptyList();
     this.groupAvatarId          = Optional.absent();
     this.localNumber            = false;
@@ -230,11 +231,10 @@ public class Recipient {
   Recipient(@NonNull RecipientId id, @NonNull RecipientDetails details) {
     this.id                     = id;
     this.resolving              = false;
-    this.address                = details.address;
     this.uuid                   = details.uuid;
-    this.e164                   = details.address.isPhone() ? details.address.toPhoneString() : null;
-    this.email                  = details.address.isEmail() ? details.address.toEmailString() : null;
-    this.groupId                = details.address.isGroup() ? details.address.toGroupString() : null;
+    this.e164                   = details.e164;
+    this.email                  = details.email;
+    this.groupId                = details.groupId;
     this.participants           = details.participants;
     this.groupAvatarId          = details.groupAvatarId;
     this.localNumber            = details.isLocalNumber;
@@ -311,12 +311,7 @@ public class Recipient {
   }
 
   public @NonNull Address requireAddress() {
-
-    if (resolvedAddress == null) {
-      throw new MissingAddressError();
-    }
-
-    return resolvedAddress;
+    return null;
   }
 
   public @NonNull Optional<String> getUuid() {
@@ -335,9 +330,13 @@ public class Recipient {
     return Optional.fromNullable(groupId);
   }
 
+  /**
+   * @return A string identifier able to be used with the Signal service. Prefers UUID, and if not
+   * available, will return an E164 number.
+   */
   public @NonNull String requireServiceIdentifier() {
     Recipient resolved = resolving ? resolve() : this;
-    return resolved.getUuid().or(requireAddress().serialize());
+    return resolved.getUuid().or(getE164().get());
   }
 
   public @Nullable String getCustomLabel() {
@@ -377,9 +376,15 @@ public class Recipient {
   }
 
   public @NonNull String toShortString() {
-    return getName() == null ? address == null ? ""
-                                               : address.serialize()
-                             : getName();
+    if (getName() != null) {
+      return getName();
+    } else if (getE164().isPresent()) {
+      return e164;
+    } else if (getEmail().isPresent()) {
+      return email;
+    } else {
+      return "";
+    }
   }
 
   public @NonNull Drawable getFallbackContactPhotoDrawable(Context context, boolean inverted) {
@@ -396,8 +401,8 @@ public class Recipient {
 
   public @Nullable ContactPhoto getContactPhoto() {
     if      (localNumber)                            return null;
-    else if (isGroup() && groupAvatarId.isPresent()) return new GroupRecordContactPhoto(address, groupAvatarId.get());
-    else if (systemContactPhoto != null)             return new SystemContactPhoto(address, systemContactPhoto, 0);
+    else if (isGroup() && groupAvatarId.isPresent()) return new GroupRecordContactPhoto(groupId, groupAvatarId.get());
+    else if (systemContactPhoto != null)             return new SystemContactPhoto(id, systemContactPhoto, 0);
     else if (profileAvatar != null)                  return new ProfileContactPhoto(id, profileAvatar);
     else                                             return null;
   }
