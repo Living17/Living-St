@@ -263,14 +263,14 @@ public class CreateProfileActivity extends BaseActionBarActivity {
   }
 
   private void initializeProfileAvatar(boolean excludeSystem) {
-    Address ourAddress = Address.fromSerialized(TextSecurePreferences.getLocalNumber(this));
+    Recipient self = Recipient.self();
 
-    if (AvatarHelper.getAvatarFile(this, ourAddress).exists() && AvatarHelper.getAvatarFile(this, ourAddress).length() > 0) {
+    if (AvatarHelper.getAvatarFile(this, self.getId()).exists() && AvatarHelper.getAvatarFile(this, self.getId()).length() > 0) {
       new AsyncTask<Void, Void, byte[]>() {
         @Override
         protected byte[] doInBackground(Void... params) {
           try {
-            return Util.readFully(AvatarHelper.getInputStreamFor(CreateProfileActivity.this, ourAddress));
+            return Util.readFully(AvatarHelper.getInputStreamFor(CreateProfileActivity.this, self.getId()));
           } catch (IOException e) {
             Log.w(TAG, e);
             return null;
@@ -373,7 +373,7 @@ public class CreateProfileActivity extends BaseActionBarActivity {
 
         try {
           accountManager.setProfileAvatar(profileKey, avatar);
-          AvatarHelper.setAvatar(CreateProfileActivity.this, Address.fromSerialized(TextSecurePreferences.getLocalNumber(context)), avatarBytes);
+          AvatarHelper.setAvatar(CreateProfileActivity.this, Recipient.self().getId(), avatarBytes);
           TextSecurePreferences.setProfileAvatarId(CreateProfileActivity.this, new SecureRandom().nextInt());
         } catch (IOException e) {
           Log.w(TAG, e);

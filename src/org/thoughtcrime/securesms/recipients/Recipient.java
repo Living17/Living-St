@@ -291,11 +291,11 @@ public class Recipient {
   }
 
   public @Nullable ContactPhoto getContactPhoto() {
-    if      (localNumber)                                     return null;
+    if      (localNumber)                            return null;
     else if (isGroup() && groupAvatarId.isPresent()) return new GroupRecordContactPhoto(address, groupAvatarId.get());
-    else if (systemContactPhoto != null)                      return new SystemContactPhoto(address, systemContactPhoto, 0);
-    else if (profileAvatar != null)                           return new ProfileContactPhoto(address, profileAvatar);
-    else                                                      return null;
+    else if (systemContactPhoto != null)             return new SystemContactPhoto(address, systemContactPhoto, 0);
+    else if (profileAvatar != null)                  return new ProfileContactPhoto(id, profileAvatar);
+    else                                             return null;
   }
 
   public @Nullable Uri getMessageRingtone() {
