@@ -99,7 +99,7 @@ public class AppProtectionPreferenceFragment extends CorrectedPreferenceFragment
 
     Preference             registrationLockV1Group = this.findPreference("prefs_lock_v1");
     SwitchPreferenceCompat registrationLockV1      = (SwitchPreferenceCompat) this.findPreference(TextSecurePreferences.REGISTRATION_LOCK_PREF_V1);
-    Preference             signalPinGroup          = this.findPreference("prefs_lock_v2");
+    Preference             signalPinGroup          = this.findPreference("prefs_signal_pin");
     Preference             signalPinCreateChange   = this.findPreference(TextSecurePreferences.SIGNAL_PIN_CHANGE);
     SwitchPreferenceCompat registrationLockV2      = (SwitchPreferenceCompat) this.findPreference(KbsValues.V2_LOCK_ENABLED);
 

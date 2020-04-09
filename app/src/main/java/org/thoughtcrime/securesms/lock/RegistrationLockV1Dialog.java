@@ -52,7 +52,7 @@ public final class RegistrationLockV1Dialog {
   public static void showReminderIfNecessary(@NonNull Fragment fragment) {
     final Context context = fragment.requireContext();
 
-    if (PinState.shouldShowRegistrationLockV1Reminder()) {
+    if (!PinState.shouldShowRegistrationLockV1Reminder()) {
       return;
     }
 
