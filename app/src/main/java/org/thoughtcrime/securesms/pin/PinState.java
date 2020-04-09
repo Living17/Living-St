@@ -308,11 +308,13 @@ public final class PinState {
       return State.REGISTRATION_LOCK_V1;
     }
 
-    if (!v1Enabled && v2Enabled && hasPin) {
+    if (v2Enabled && hasPin) {
+      TextSecurePreferences.setV1RegistrationLockEnabled(context, false);
       return State.PIN_WITH_REGISTRATION_LOCK_ENABLED;
     }
 
-    if (!v1Enabled && !v2Enabled && hasPin) {
+    if (!v2Enabled && hasPin) {
+      TextSecurePreferences.setV1RegistrationLockEnabled(context, false);
       return State.PIN_WITH_REGISTRATION_LOCK_DISABLED;
     }
 
