@@ -58,6 +58,11 @@ public class PendingMemberInvitesFragment extends Fragment {
       public void onCancelAllInvites(@NonNull GroupMemberEntry.UnknownPendingMemberCount pendingMembers) {
         throw new AssertionError();
       }
+
+      @Override
+      public void onRemove(@NonNull GroupMemberEntry.FullMember fullMember) {
+        throw new AssertionError();
+      }
     });
 
     othersInvited.setAdminActionsListener(new AdminActionsListener() {
@@ -70,6 +75,11 @@ public class PendingMemberInvitesFragment extends Fragment {
       @Override
       public void onCancelAllInvites(@NonNull GroupMemberEntry.UnknownPendingMemberCount pendingMembers) {
         viewModel.cancelInvitesFor(pendingMembers);
+      }
+
+      @Override
+      public void onRemove(@NonNull GroupMemberEntry.FullMember fullMember) {
+        throw new AssertionError();
       }
     });
 

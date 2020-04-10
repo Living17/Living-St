@@ -99,6 +99,20 @@ public final class GroupManager {
   }
 
   @WorkerThread
+  public static boolean ejectFromGroup(@NonNull Context context, @NonNull GroupId.V2 groupId, @NonNull Recipient recipient) {
+    if (groupId.isV2()) {
+      try {
+        return V2GroupManager.ejectOneMember(context, groupId.requireV2(), recipient) != null;
+      } catch (VerificationFailedException | IOException | InvalidGroupStateException e) {
+        Log.w(TAG, e);
+        return false;
+      }
+    } else {
+      return V1GroupManager.leaveGroup(context, groupId.requireV1());
+    }
+  }
+
+  @WorkerThread
   public static void updateGroupTimer(@NonNull Context context, @NonNull GroupId.Push groupId, int expirationTime)
       throws IOException, VerificationFailedException, InvalidGroupStateException
   {
@@ -129,6 +143,15 @@ public final class GroupManager {
       throws InvalidGroupStateException, VerificationFailedException, IOException
   {
     V2GroupManager.cancelInvites(context, groupId.requireV2(), uuidCipherTexts);
+  }
+
+  @WorkerThread
+  public static void applyMembershipRightsChange(@NonNull Context context,
+                                                 @NonNull GroupId.V2 groupId,
+                                                 @NonNull GroupAccessControl newRights)
+      throws VerificationFailedException, InvalidGroupStateException, IOException
+  {
+    V2GroupManager.applyMembershipRightsChange(context, groupId, newRights);
   }
 
   @WorkerThread

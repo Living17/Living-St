@@ -157,6 +157,18 @@ final class GroupMemberListAdapter extends LifecycleRecyclerAdapter<GroupMemberL
       GroupMemberEntry.FullMember fullMember = (GroupMemberEntry.FullMember) memberEntry;
 
       bindRecipient(fullMember.getMember());
+
+      if (fullMember.isRemovable() && adminActionsListener != null) {
+        popupMenu.setMenu(R.menu.full_member_pending_menu,
+                          item -> {
+                            if (item == R.id.remove_member) {
+                              adminActionsListener.onRemove(fullMember);
+                              return true;
+                            }
+                            return false;
+                          });
+        showMenu();
+      }
     }
   }
 

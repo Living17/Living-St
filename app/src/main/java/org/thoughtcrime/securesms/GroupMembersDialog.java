@@ -49,7 +49,7 @@ public final class GroupMembersDialog {
 
         ArrayList<GroupMemberEntry.FullMember> pendingMembers = new ArrayList<>(members.size());
         for (Recipient member : members) {
-          GroupMemberEntry.FullMember entry = new GroupMemberEntry.FullMember(member);
+          GroupMemberEntry.FullMember entry = new GroupMemberEntry.FullMember(member, false);
 
           entry.setOnClick(() -> contactClick(member));
 

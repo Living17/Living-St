@@ -16,7 +16,7 @@ import androidx.annotation.Nullable;
 import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
-import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.ViewModelProviders;
 
 import org.signal.zkgroup.VerificationFailedException;
 import org.thoughtcrime.securesms.ExpirationDialog;
@@ -24,9 +24,10 @@ import org.thoughtcrime.securesms.MediaPreviewActivity;
 import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.components.AvatarImageView;
 import org.thoughtcrime.securesms.components.ThreadPhotoRailView;
-import org.thoughtcrime.securesms.conversation.ConversationActivity;
 import org.thoughtcrime.securesms.groups.GroupId;
 import org.thoughtcrime.securesms.groups.GroupManager;
+import org.thoughtcrime.securesms.groups.ui.AdminActionsListener;
+import org.thoughtcrime.securesms.groups.ui.GroupMemberEntry;
 import org.thoughtcrime.securesms.groups.ui.GroupMemberListView;
 import org.thoughtcrime.securesms.groups.ui.LeaveGroupDialog;
 import org.thoughtcrime.securesms.groups.ui.managegroup.dialogs.GroupRightsDialog;
@@ -41,6 +42,7 @@ import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.push.exceptions.AuthorizationFailedException;
 
 import java.io.IOException;
+import java.util.Objects;
 
 public class ManageGroupFragment extends Fragment {
   private static final String GROUP_ID = "GROUP_ID";
@@ -57,10 +59,11 @@ public class ManageGroupFragment extends Fragment {
   private AvatarImageView                    avatar;
   private ThreadPhotoRailView                threadPhotoRailView;
   private View                               groupMediaCard;
-  private View                               groupAttributesCard;
+  private View                               accessControlCard;
   private ManageGroupViewModel.CursorFactory cursorFactory;
   private View                               photoRailLabel;
   private Button                             editGroupAccessValue;
+  private Button                             editGroupMembershipValue;
   private Button                             disappearingMessages;
   private Button                             blockGroup;
   private Button                             leaveGroup;
@@ -83,19 +86,20 @@ public class ManageGroupFragment extends Fragment {
   {
     View view = inflater.inflate(R.layout.group_manage_fragment, container, false);
 
-    avatar               = view.findViewById(R.id.group_avatar);
-    groupTitle           = view.findViewById(R.id.group_title);
-    memberCount          = view.findViewById(R.id.member_count);
-    groupMemberList      = view.findViewById(R.id.group_members);
-    listPending          = view.findViewById(R.id.listPending);
-    threadPhotoRailView  = view.findViewById(R.id.recent_photos);
-    groupMediaCard       = view.findViewById(R.id.group_media_card);
-    groupAttributesCard  = view.findViewById(R.id.group_attributes_access_control_card);
-    photoRailLabel       = view.findViewById(R.id.rail_label);
-    editGroupAccessValue = view.findViewById(R.id.edit_group_access_value);
-    disappearingMessages = view.findViewById(R.id.disappearing_messages);
-    blockGroup           = view.findViewById(R.id.blockGroup);
-    leaveGroup           = view.findViewById(R.id.leaveGroup);
+    avatar                   = view.findViewById(R.id.group_avatar);
+    groupTitle               = view.findViewById(R.id.group_title);
+    memberCount              = view.findViewById(R.id.member_count);
+    groupMemberList          = view.findViewById(R.id.group_members);
+    listPending              = view.findViewById(R.id.listPending);
+    threadPhotoRailView      = view.findViewById(R.id.recent_photos);
+    groupMediaCard           = view.findViewById(R.id.group_media_card);
+    accessControlCard        = view.findViewById(R.id.group_access_control_card);
+    photoRailLabel           = view.findViewById(R.id.rail_label);
+    editGroupAccessValue     = view.findViewById(R.id.edit_group_access_value);
+    editGroupMembershipValue = view.findViewById(R.id.edit_group_membership_value);
+    disappearingMessages     = view.findViewById(R.id.disappearing_messages);
+    blockGroup               = view.findViewById(R.id.blockGroup);
+    leaveGroup               = view.findViewById(R.id.leaveGroup);
 
     return view;
   }
@@ -105,13 +109,12 @@ public class ManageGroupFragment extends Fragment {
     super.onActivityCreated(savedInstanceState);
 
     Context context = requireContext();
-    GroupId groupId = GroupId.parseNullable(requireArguments().getString(GROUP_ID));
 
-    if (groupId == null) {
-      throw new AssertionError();
-    }
+    GroupId.V2 groupId = GroupId.parse(Objects.requireNonNull(requireArguments().getString(GROUP_ID))).requireV2();
 
-    viewModel = new ViewModelProvider(this).get(ManageGroupViewModel.class);
+    ManageGroupViewModel.Factory factory = new ManageGroupViewModel.Factory(context, groupId);
+
+    viewModel = ViewModelProviders.of(requireActivity(), factory).get(ManageGroupViewModel.class);
 
     viewModel.getMembers().observe(getViewLifecycleOwner(), members -> groupMemberList.setMembers(members));
 
@@ -145,7 +148,7 @@ public class ManageGroupFragment extends Fragment {
                                                                             ViewCompat.getLayoutDirection(threadPhotoRailView) == ViewCompat.LAYOUT_DIRECTION_LTR),
                                  RETURN_FROM_MEDIA));
 
-      groupAttributesCard.setVisibility(vs.isV2() ? View.VISIBLE : View.GONE);
+      accessControlCard.setVisibility(vs.getGroupRecipient().requireGroupId().isV2() ? View.VISIBLE : View.GONE);
       vs.getGroupRecipient().live().observe(getViewLifecycleOwner(), r -> {
         disappearingMessages.setText(ExpirationUtil.getExpirationDisplayValue(getContext(), r.getExpireMessages()));
         disappearingMessages.setOnClickListener(v -> handleExpirationSelection(r));
@@ -158,10 +161,10 @@ public class ManageGroupFragment extends Fragment {
                                                                                null));
     });
 
-    viewModel.getEditGroupAttributesRights().observe(getViewLifecycleOwner(), r -> {
+    viewModel.getMembershipRights().observe(getViewLifecycleOwner(), r -> {
         if (r != null) {
-          editGroupAccessValue.setText(r.getString());
-          editGroupAccessValue.setOnClickListener(v -> new GroupRightsDialog(context, r, (from, to) -> viewModel.applyAttributesRightsChange(context, to)).show());
+          editGroupMembershipValue.setText(r.getString());
+          editGroupMembershipValue.setOnClickListener(v -> new GroupRightsDialog(context, GroupRightsDialog.Type.MEMBERSHIP, r, (from, to) -> viewModel.applyMembershipRightsChange(to)).show());
         }
       }
     );
@@ -169,12 +172,32 @@ public class ManageGroupFragment extends Fragment {
     viewModel.getEditGroupAttributesRights().observe(getViewLifecycleOwner(), r -> {
         if (r != null) {
           editGroupAccessValue.setText(r.getString());
-          editGroupAccessValue.setOnClickListener(v -> new GroupRightsDialog(context, r, (from, to) -> viewModel.applyAttributesRightsChange(context, to)).show());
+          editGroupAccessValue.setOnClickListener(v -> new GroupRightsDialog(context, GroupRightsDialog.Type.ATTRIBUTES, r, (from, to) -> viewModel.applyAttributesRightsChange(to)).show());
         }
       }
     );
 
-    viewModel.setGroupId(context, groupId);
+    viewModel.getIsAdmin().observe(getViewLifecycleOwner(), admin -> {
+      editGroupMembershipValue.setEnabled(admin);
+      editGroupAccessValue.setEnabled(admin);
+    });
+
+    groupMemberList.setAdminActionsListener(new AdminActionsListener() {
+      @Override
+      public void onRemove(@NonNull GroupMemberEntry.FullMember fullMember) {
+        viewModel.removeMember(fullMember);
+      }
+
+      @Override
+      public void onCancelInvite(@NonNull GroupMemberEntry.PendingMember pendingMember) {
+        throw new AssertionError();
+      }
+
+      @Override
+      public void onCancelAllInvites(@NonNull GroupMemberEntry.UnknownPendingMemberCount pendingMembers) {
+        throw new AssertionError();
+      }
+    });
   }
 
   private void handleExpirationSelection(@NonNull Recipient groupRecipient) {

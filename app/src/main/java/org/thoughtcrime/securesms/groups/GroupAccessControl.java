@@ -6,7 +6,7 @@ import org.thoughtcrime.securesms.R;
 
 public enum GroupAccessControl {
   ALL_MEMBERS(R.string.GroupManagement_access_level_all_members),
-  ONLY_ADMINS(R.string.GroupManagement_access_level_anyone);
+  ONLY_ADMINS(R.string.GroupManagement_access_level_only_admins);
 
   private final @StringRes int string;
 

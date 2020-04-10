@@ -2,7 +2,9 @@ package org.thoughtcrime.securesms.groups.ui.managegroup.dialogs;
 
 import android.content.Context;
 
+import androidx.annotation.ArrayRes;
 import androidx.annotation.NonNull;
+import androidx.annotation.StringRes;
 import androidx.appcompat.app.AlertDialog;
 
 import org.thoughtcrime.securesms.R;
@@ -12,15 +14,18 @@ public final class GroupRightsDialog {
 
   private final AlertDialog.Builder builder;
 
-  private @NonNull
-  GroupAccessControl rights;
+  @NonNull private GroupAccessControl rights;
 
-  public GroupRightsDialog(@NonNull Context context, @NonNull GroupAccessControl currentRights, @NonNull GroupRightsDialog.OnChange onChange) {
+  public GroupRightsDialog(@NonNull Context context,
+                           @NonNull Type type,
+                           @NonNull GroupAccessControl currentRights,
+                           @NonNull GroupRightsDialog.OnChange onChange)
+  {
     rights = currentRights;
 
     builder = new AlertDialog.Builder(context)
-                .setTitle(R.string.GroupManagement_choose_who_can_change_the_group_name_and_photo)
-                .setSingleChoiceItems(R.array.GroupManagement_edit_group_info_choices, currentRights.ordinal(), (dialog, which) -> rights = GroupAccessControl.values()[which])
+                .setTitle(type.message)
+                .setSingleChoiceItems(type.choices, currentRights.ordinal(), (dialog, which) -> rights = GroupAccessControl.values()[which])
                 .setNegativeButton(android.R.string.cancel, (dialog, which) -> {
                 })
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
@@ -38,5 +43,22 @@ public final class GroupRightsDialog {
 
   public interface OnChange {
     void changed(@NonNull GroupAccessControl from, @NonNull GroupAccessControl to);
+  }
+
+  public enum Type {
+
+    MEMBERSHIP(R.string.GroupManagement_choose_who_can_add_or_invite_new_members,
+               R.array.GroupManagement_edit_group_membership_choices),
+
+    ATTRIBUTES(R.string.GroupManagement_choose_who_can_change_the_group_name_and_photo,
+               R.array.GroupManagement_edit_group_info_choices);
+
+    @StringRes private final int message;
+    @ArrayRes  private final int choices;
+
+    Type(@StringRes int message, @ArrayRes int choices) {
+      this.message = message;
+      this.choices = choices;
+    }
   }
 }

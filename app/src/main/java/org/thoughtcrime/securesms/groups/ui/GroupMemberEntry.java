@@ -37,13 +37,19 @@ public abstract class GroupMemberEntry {
   public final static class FullMember extends GroupMemberEntry {
 
     private final Recipient member;
+    private final boolean   removable;
 
-    public FullMember(@NonNull Recipient member) {
-      this.member = member;
+    public FullMember(@NonNull Recipient member, boolean removable) {
+      this.member    = member;
+      this.removable = removable;
     }
 
     public Recipient getMember() {
       return member;
+    }
+
+    public boolean isRemovable() {
+      return removable;
     }
   }
 

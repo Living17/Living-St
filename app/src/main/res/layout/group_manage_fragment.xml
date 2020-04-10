@@ -141,7 +141,7 @@
         </androidx.cardview.widget.CardView>
 
         <androidx.cardview.widget.CardView
-            android:id="@+id/group_attributes_access_control_card"
+            android:id="@+id/group_access_control_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
@@ -153,23 +153,49 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="vertical">
 
-                <Button
-                    android:id="@+id/edit_group_access_title"
-                    style="@style/GroupTextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/ManageGroupActivity_who_can_edit_group_info" />
-
-                <Button
-                    android:id="@+id/edit_group_access_value"
-                    style="@style/GroupTextButton.UltramarineUI"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textAlignment="textEnd"
-                    tools:text="All members" />
+                    android:layout_height="wrap_content">
 
+                    <Button
+                        android:id="@+id/edit_group_membership_title"
+                        style="@style/GroupTextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ManageGroupActivity_who_can_edit_group_membership" />
+
+                    <Button
+                        android:id="@+id/edit_group_membership_value"
+                        style="@style/GroupTextButton.UltramarineUI"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textAlignment="textEnd"
+                        tools:text="Only admin" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <Button
+                        android:id="@+id/edit_group_access_title"
+                        style="@style/GroupTextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ManageGroupActivity_who_can_edit_group_info" />
+
+                    <Button
+                        android:id="@+id/edit_group_access_value"
+                        style="@style/GroupTextButton.UltramarineUI"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textAlignment="textEnd"
+                        tools:text="All members" />
+
+                </LinearLayout>
             </LinearLayout>
 
         </androidx.cardview.widget.CardView>
@@ -180,12 +206,13 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             app:cardBackgroundColor="?android:attr/windowBackground"
-            app:layout_constraintTop_toBottomOf="@id/group_attributes_access_control_card">
+            app:layout_constraintTop_toBottomOf="@id/group_access_control_card">
 
             <org.thoughtcrime.securesms.groups.ui.GroupMemberListView
                 android:id="@+id/group_members"
                 android:layout_width="match_parent"
-                android:layout_height="100dp" />
+                android:layout_height="wrap_content"
+                app:maxHeight="280dp" />
 
         </androidx.cardview.widget.CardView>
 

@@ -551,9 +551,11 @@ final class V2GroupManager {
   static boolean leaveGroup(@NonNull Context context, @NonNull GroupId.V2 groupId)
     throws VerificationFailedException, IOException, InvalidGroupStateException
   {
-    ejectOneMember(context, groupId, Recipient.self());
-    DatabaseFactory.getGroupDatabase(context).setActive(groupId, false);
-    return true;
+    if (ejectOneMember(context, groupId, Recipient.self()) != null) {
+      DatabaseFactory.getGroupDatabase(context).setActive(groupId, false);
+      return true;
+    }
+    return false;
   }
 
   static GroupActionResult ejectOneMember(@NonNull Context context, @NonNull GroupId.V2 groupId, @NonNull Recipient toEject)

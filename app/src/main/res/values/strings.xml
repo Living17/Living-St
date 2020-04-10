@@ -451,6 +451,10 @@
     <string name="GroupManagement_access_level_all_members">All members</string>
     <string name="GroupManagement_access_level_only_admins">Only admins</string>
     <string name="GroupManagement_access_level_unknown" translatable="false">Unknown</string>
+    <array name="GroupManagement_edit_group_membership_choices">
+        <item>@string/GroupManagement_access_level_all_members</item>
+        <item>@string/GroupManagement_access_level_only_admins</item>
+    </array>
     <array name="GroupManagement_edit_group_info_choices">
         <item>@string/GroupManagement_access_level_all_members</item>
         <item>@string/GroupManagement_access_level_only_admins</item>
@@ -478,13 +482,19 @@
     <!-- ManageGroupActivity --> <!-- TODO GV2 Review copy -->
     <string name="ManageGroupActivity_disappearing_messages">Disappearing messages</string>
     <string name="ManageGroupActivity_pending_group_invites">Pending group invites</string>
+    <string name="ManageGroupActivity_who_can_edit_group_membership">Who can edit group membership</string>
     <string name="ManageGroupActivity_who_can_edit_group_info">Who can edit group info</string>
     <string name="ManageGroupActivity_block_group">Block group</string>
     <string name="ManageGroupActivity_leave_group">Leave group</string>
 
+    <string name="ManageGroupActivity_remove_from_group">Remove from group</string>
+    <string name="ManageGroupActivity_remove_s_from_s">Remove %1$s from "%2$s"?</string>
+    <string name="ManageGroupActivity_remove">Remove</string>
+
     <string name="ManageGroupActivity_you_dont_have_the_rights_to_do_this">You don\'t have the rights to do this</string>
     <string name="ManageGroupActivity_failed_to_update_the_group">Failed to update the group</string>
 
+    <string name="GroupManagement_choose_who_can_add_or_invite_new_members">Choose who can add or invite new members</string>
     <string name="GroupManagement_choose_who_can_change_the_group_name_and_photo">Choose who can change the group name and photo</string>
 
     <plurals name="GroupMemberList_invited">
