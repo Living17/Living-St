@@ -706,6 +706,10 @@ public class Recipient {
     return groupsV2Capability;
   }
 
+  public Capability getUuidCapability() {
+    return uuidCapability;
+  }
+
   public @Nullable byte[] getProfileKey() {
     return profileKey;
   }
@@ -779,6 +783,12 @@ public class Recipient {
     if (o == null || getClass() != o.getClass()) return false;
     Recipient recipient = (Recipient) o;
     return id.equals(recipient.id);
+  }
+
+  public boolean isGv2Capable() {
+    return uuid               != null                 &&
+           uuidCapability     == Capability.SUPPORTED &&
+           groupsV2Capability == Capability.SUPPORTED;
   }
 
   public enum Capability {

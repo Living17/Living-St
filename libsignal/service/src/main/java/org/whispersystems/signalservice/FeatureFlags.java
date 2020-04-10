@@ -6,8 +6,8 @@ package org.whispersystems.signalservice;
  */
 public final class FeatureFlags {
   /** Zero Knowledge Group functions */
-  public static final boolean ZK_GROUPS = false;
+  public static final boolean ZK_GROUPS = true;
 
   /** Read and write versioned profile information. */
-  public static final boolean VERSIONED_PROFILES = ZK_GROUPS && false;
+  public static final boolean VERSIONED_PROFILES = ZK_GROUPS && true;
 }

@@ -234,6 +234,7 @@ public class RecipientDatabase extends Database {
   }
 
   public enum GroupType {
+    //TODO: GV2 - NEED SIGNAL_V2? Or rename to PUSH
     NONE(0), MMS(1), SIGNAL_V1(2);
 
     private final int id;
@@ -974,6 +975,30 @@ public class RecipientDatabase extends Database {
       markDirty(id, DirtyState.UPDATE);
       Recipient.live(id).refresh();
       StorageSyncHelper.scheduleSyncForDataChange();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Sets the profile key iff currently null.
+   * <p>
+   * If it sets it, it also clears out the profile key credential and resets the unidentified access mode.
+   * @return true iff changed.
+   */
+  public boolean setProfileKeyIfAbsent(@NonNull RecipientId id, @NonNull ProfileKey profileKey) {
+    SQLiteDatabase database    = databaseHelper.getWritableDatabase();
+    String         selection   = ID + " = ? AND " + PROFILE_KEY + " is NULL";
+    String[]       args        = new String[]{id.serialize()};
+    ContentValues  valuesToSet = new ContentValues(3);
+
+    valuesToSet.put(PROFILE_KEY, Base64.encodeBytes(profileKey.serialize()));
+    valuesToSet.putNull(PROFILE_KEY_CREDENTIAL);
+    valuesToSet.put(UNIDENTIFIED_ACCESS_MODE, UnidentifiedAccessMode.UNKNOWN.getMode());
+
+    if (database.update(TABLE_NAME, valuesToSet, selection, args) > 0) {
+      markDirty(id, DirtyState.UPDATE);
+      Recipient.live(id).refresh();
       return true;
     } else {
       return false;

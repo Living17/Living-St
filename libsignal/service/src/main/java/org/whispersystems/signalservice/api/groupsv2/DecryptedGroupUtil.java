@@ -71,7 +71,7 @@ public final class DecryptedGroupUtil {
    * The UUID of the member that made the change.
    */
   public static UUID editorUuid(DecryptedGroupChange change) {
-    return UuidUtil.fromByteString(change.getEditor());
+    return change != null ? UuidUtil.fromByteStringOrUnknown(change.getEditor()) : UuidUtil.UNKNOWN_UUID;
   }
 
   public static Optional<DecryptedMember> findMemberByUuid(Collection<DecryptedMember> members, UUID uuid) {

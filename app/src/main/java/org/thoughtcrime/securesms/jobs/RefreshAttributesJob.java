@@ -49,6 +49,11 @@ public class RefreshAttributesJob extends BaseJob {
 
   @Override
   public void onRun() throws IOException {
+    if (!TextSecurePreferences.isPushRegistered(context)) {
+      Log.w(TAG, "Skipping attribute refresh while not push registered");
+      return;
+    }
+
     int       registrationId              = TextSecurePreferences.getLocalRegistrationId(context);
     boolean   fetchesMessages             = TextSecurePreferences.isFcmDisabled(context);
     byte[]    unidentifiedAccessKey       = UnidentifiedAccess.deriveAccessKeyFrom(ProfileKeyUtil.getSelfProfileKey());

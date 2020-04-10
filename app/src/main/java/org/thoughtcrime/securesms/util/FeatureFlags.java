@@ -77,6 +77,8 @@ public final class FeatureFlags {
    */
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   private static final Map<String, Boolean> FORCED_VALUES = new HashMap<String, Boolean>() {{
+    put(UUIDS, true);
+    put(MESSAGE_REQUESTS, true);
   }};
 
   /**
@@ -410,4 +412,7 @@ public final class FeatureFlags {
 
   /** Read and write versioned profile information. */
   public static final boolean VERSIONED_PROFILES = org.whispersystems.signalservice.FeatureFlags.VERSIONED_PROFILES;
+
+  /** Can create a new V2 Group */
+  public static final boolean CREATE_V2_GROUPS = VERSIONED_PROFILES && uuids() && true;
 }

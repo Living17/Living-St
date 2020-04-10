@@ -81,6 +81,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -1109,9 +1110,12 @@ public class MmsDatabase extends MessagingDatabase {
         MessageGroupContext.GroupV2Properties groupV2Properties = outgoingGroupMediaMessage.requireGroupV2Properties();
         members.addAll(Stream.of(groupV2Properties.getActiveMembers()).map(recipientDatabase::getOrInsertFromUuid).toList());
         if (groupV2Properties.isUpdate()) {
+          Log.d("ALAN", "Sending a group update to pending members also");
           members.addAll(Stream.of(groupV2Properties.getPendingMembers()).map(recipientDatabase::getOrInsertFromUuid).toList());
         }
         members.remove(Recipient.self().getId());
+        Log.d("ALAN", String.format(Locale.US, "Sending to %d members", members.size()));
+        Log.d("ALAN", String.format("body: %s", message.getBody()));
       } else {
         members.addAll(Stream.of(DatabaseFactory.getGroupDatabase(context).getGroupMembers(message.getRecipient().requireGroupId(), GroupDatabase.MemberSet.FULL_MEMBERS_EXCLUDING_SELF)).map(Recipient::getId).toList());
       }

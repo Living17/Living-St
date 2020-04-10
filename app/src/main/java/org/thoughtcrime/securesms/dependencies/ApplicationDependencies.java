@@ -7,11 +7,15 @@ import androidx.annotation.NonNull;
 import org.thoughtcrime.securesms.BuildConfig;
 import org.thoughtcrime.securesms.IncomingMessageProcessor;
 import org.thoughtcrime.securesms.gcm.MessageRetriever;
+import org.thoughtcrime.securesms.groups.v2.processing.GroupsV2StateProcessor;
+import org.thoughtcrime.securesms.groups.v2.GroupMemoryCache;
+import org.thoughtcrime.securesms.groups.v2.NetworkGroupStateProvider;
 import org.thoughtcrime.securesms.jobmanager.JobManager;
 import org.thoughtcrime.securesms.keyvalue.KeyValueStore;
 import org.thoughtcrime.securesms.megaphone.MegaphoneRepository;
 import org.thoughtcrime.securesms.push.SignalServiceNetworkAccess;
 import org.thoughtcrime.securesms.recipients.LiveRecipientCache;
+import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.service.IncomingMessageObserver;
 import org.thoughtcrime.securesms.util.FeatureFlags;
 import org.thoughtcrime.securesms.util.FrameRateTracker;
@@ -21,6 +25,8 @@ import org.whispersystems.signalservice.api.KeyBackupService;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.SignalServiceMessageReceiver;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
+import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
+import org.whispersystems.signalservice.api.groupsv2.GroupsV2Authorization;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 
 /**
@@ -46,6 +52,9 @@ public class ApplicationDependencies {
   private static FrameRateTracker             frameRateTracker;
   private static KeyValueStore                keyValueStore;
   private static MegaphoneRepository          megaphoneRepository;
+  private static GroupsV2Authorization        groupsV2Authorization;
+  private static GroupMemoryCache             groupMemoryCache;
+  private static GroupsV2StateProcessor       groupsV2StateProcessor;
   private static GroupsV2Operations           groupsV2Operations;
 
   public static synchronized void init(@NonNull Application application, @NonNull Provider provider) {
@@ -72,6 +81,16 @@ public class ApplicationDependencies {
     return accountManager;
   }
 
+  public static synchronized @NonNull GroupsV2Authorization getGroupsV2Authorization() {
+    assertInitialization();
+
+    if (groupsV2Authorization == null) {
+      groupsV2Authorization = getSignalServiceAccountManager().createGroupsV2Authorization(Recipient.self().getUuid().get());
+    }
+
+    return groupsV2Authorization;
+  }
+
   public static synchronized @NonNull GroupsV2Operations getGroupsV2Operations() {
     assertInitialization();
 
@@ -87,6 +106,29 @@ public class ApplicationDependencies {
                                                                 BuildConfig.KBS_ENCLAVE_NAME,
                                                                 BuildConfig.KBS_MRENCLAVE,
                                                                 10);
+  }
+
+  public static synchronized @NonNull GroupMemoryCache getGroupsV2MemoryCache() {
+    assertInitialization();
+
+    if (groupMemoryCache == null) {
+      final GroupsV2Api           groups                = getSignalServiceAccountManager().getGroupsV2Api();
+      final GroupsV2Authorization GroupsV2Authorization = getGroupsV2Authorization();
+
+      groupMemoryCache = new GroupMemoryCache(new NetworkGroupStateProvider(groups, GroupsV2Authorization));
+    }
+
+    return groupMemoryCache;
+  }
+
+  public static synchronized @NonNull GroupsV2StateProcessor getGroupsV2StateProcessor() {
+    assertInitialization();
+
+    if (groupsV2StateProcessor == null) {
+      groupsV2StateProcessor = new GroupsV2StateProcessor(application);
+    }
+
+    return groupsV2StateProcessor;
   }
 
   public static synchronized @NonNull SignalServiceMessageSender getSignalServiceMessageSender() {

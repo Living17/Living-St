@@ -47,7 +47,7 @@ import java.util.UUID;
 public final class GroupsV2Operations {
 
   /** Used for undecryptable pending invites */
-  public static final UUID UNKNOWN_UUID = new UUID(0, 0);
+  public static final UUID UNKNOWN_UUID = UuidUtil.UNKNOWN_UUID;
 
   private final ServerPublicParams        serverPublicParams;
   private final ClientZkProfileOperations clientZkProfileOperations;
