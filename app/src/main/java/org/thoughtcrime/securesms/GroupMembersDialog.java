@@ -5,14 +5,17 @@ import android.content.Intent;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.Lifecycle;
 
 import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.database.GroupDatabase;
+import org.thoughtcrime.securesms.groups.GroupId;
 import org.thoughtcrime.securesms.groups.ui.GroupMemberEntry;
 import org.thoughtcrime.securesms.groups.ui.GroupMemberListView;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientExporter;
+import org.thoughtcrime.securesms.recipients.ui.bottomsheet.RecipientBottomSheetDialog;
 import org.thoughtcrime.securesms.util.concurrent.SimpleTask;
 
 import java.util.ArrayList;
@@ -49,9 +52,12 @@ public final class GroupMembersDialog {
 
         ArrayList<GroupMemberEntry.FullMember> pendingMembers = new ArrayList<>(members.size());
         for (Recipient member : members) {
-          GroupMemberEntry.FullMember entry = new GroupMemberEntry.FullMember(member);
+          GroupMemberEntry.FullMember entry = new GroupMemberEntry.FullMember(member, false);
 
-          entry.setOnClick(() -> contactClick(member));
+          entry.setOnClick(() -> {
+            dialog.dismiss();
+            contactClick(member);
+          });
 
           if (member.isLocalNumber()) {
             pendingMembers.add(0, entry);
@@ -67,11 +73,18 @@ public final class GroupMembersDialog {
   }
 
   private void contactClick(@NonNull Recipient recipient) {
-    if (recipient.getContactUri() != null) {
-      Intent intent = new Intent(context, RecipientPreferenceActivity.class);
-      intent.putExtra(RecipientPreferenceActivity.RECIPIENT_ID, recipient.getId());
+    GroupId groupId = groupRecipient.requireGroupId();
+    if (recipient.getContactUri() != null || groupId.isV2()) {
+      if (groupId.isV2()) {
 
-      context.startActivity(intent);
+        RecipientBottomSheetDialog.create(recipient.getId(), groupId)
+                                  .show(((FragmentActivity) context).getSupportFragmentManager(), "BOTTOM");
+      } else {
+        Intent intent = new Intent(context, RecipientPreferenceActivity.class);
+        intent.putExtra(RecipientPreferenceActivity.RECIPIENT_ID, recipient.getId());
+
+        context.startActivity(intent);
+      }
     } else {
       context.startActivity(RecipientExporter.export(recipient).asAddContactIntent());
     }

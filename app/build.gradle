@@ -81,7 +81,7 @@ protobuf {
 }
 
 def canonicalVersionCode = 619
-def canonicalVersionName = "4.58.5"
+def canonicalVersionName = "4.58.5-GV2-Alpha3_zk0.6.0"
 
 def postFixSize = 10
 def abiPostFix = ['universal'   : 0,
@@ -161,7 +161,6 @@ android {
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/NOTICE'
         exclude 'META-INF/proguard/androidx-annotations.pro'
-        exclude 'lib/*/libzkgroup.so' // TODO: GV2 Remove line to include .so when used
     }
 
     buildTypes {
@@ -201,7 +200,7 @@ android {
             buildConfigField "String", "CDS_MRENCLAVE", "\"ba4ebb438bc07713819ee6c98d94037747006d7df63fc9e44d2d6f1fec962a79\""
             buildConfigField "String", "KBS_ENCLAVE_NAME", "\"823a3b2c037ff0cbe305cc48928cfcc97c9ed4a8ca6d49af6f7d6981fb60a4e9\""
             buildConfigField "String", "UNIDENTIFIED_SENDER_TRUST_ROOT", "\"BbqY1DzohE4NUZoVF+L18oUPrK3kILllLEJh2UnPSsEx\""
-            buildConfigField "String", "ZKGROUP_SERVER_PUBLIC_PARAMS", "\"\""
+            buildConfigField "String", "ZKGROUP_SERVER_PUBLIC_PARAMS", "\"5Eng41NE+ClLn5MDjfb8ahw/SgmYPXw6wafMsH5hJVeSY3+Hlqz+DCbtcv4y9HHQwP0VA131bvqnBp7psSJZLlpANq5RA7NLMvE7ox17oiCvEKnHKoccrxqLDYNfbsgGmNYOaedYZ+/mTzsx+ndnQmOnGerWYCzeKJiRTTBD5TRWb/rqCsmb0RnqkWTIqxYUR4tLgIKkS1MfduVJmAYPGQ==\""
         }
         flipper {
             initWith debug
@@ -292,7 +291,7 @@ dependencies {
     implementation 'org.signal:aesgcmprovider:0.0.3'
 
     implementation project(':libsignal-service')
-    implementation 'org.signal:zkgroup-android:0.4.1'
+    implementation 'org.signal:zkgroup-android:0.6.0'
 
     implementation 'org.signal:argon2:13.1@aar'
 

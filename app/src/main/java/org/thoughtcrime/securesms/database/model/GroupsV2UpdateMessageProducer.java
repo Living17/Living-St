@@ -297,7 +297,7 @@ final class GroupsV2UpdateMessageProducer {
   }
 
   private @NonNull String describe(@NonNull ByteString uuid) {
-    return descriptionStrategy.describe(UuidUtil.fromByteString(uuid));
+    return descriptionStrategy.describe(UuidUtil.fromByteStringOrUnknown(uuid));
   }
 
   interface DescribeMemberStrategy {
