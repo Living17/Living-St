@@ -100,6 +100,10 @@
     <style name="TextAppearance.Signal.Body2" parent="@style/TextAppearance.MaterialComponents.Body2">
     </style>
 
+    <style name="TextAppearance.Signal.Body2.Bold">
+        <item name="android:textStyle">bold</item>
+    </style>
+
     <style name="TextAppearance.Signal.Caption" parent="@style/TextAppearance.MaterialComponents.Caption">
     </style>
 

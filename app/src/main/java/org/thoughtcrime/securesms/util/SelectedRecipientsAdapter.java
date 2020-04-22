@@ -27,14 +27,15 @@ public class SelectedRecipientsAdapter extends BaseAdapter {
   @NonNull  private List<RecipientWrapper>     recipients;
 
   public SelectedRecipientsAdapter(@NonNull Context context) {
-    this(context, Collections.<Recipient>emptyList());
+    this(context, Collections.emptyList(), false);
   }
 
   public SelectedRecipientsAdapter(@NonNull Context context,
-                                   @NonNull Collection<Recipient> existingRecipients)
+                                   @NonNull Collection<Recipient> existingRecipients,
+                                   boolean isV2Admin)
   {
     this.context    = context;
-    this.recipients = wrapExistingMembers(existingRecipients);
+    this.recipients = wrapExistingMembers(existingRecipients, isV2Admin);
   }
 
   public void add(@NonNull Recipient recipient, boolean isPush) {
@@ -120,10 +121,11 @@ public class SelectedRecipientsAdapter extends BaseAdapter {
     return v;
   }
 
-  private static List<RecipientWrapper> wrapExistingMembers(Collection<Recipient> recipients) {
+  private static List<RecipientWrapper> wrapExistingMembers(Collection<Recipient> recipients, boolean isV2Admin) {
     final LinkedList<RecipientWrapper> wrapperList = new LinkedList<>();
     for (Recipient recipient : recipients) {
-      wrapperList.add(new RecipientWrapper(recipient, false, true));
+      // TODO: GroupsV2, can admins remove other admins
+      wrapperList.add(new RecipientWrapper(recipient, isV2Admin, true));
     }
     return wrapperList;
   }

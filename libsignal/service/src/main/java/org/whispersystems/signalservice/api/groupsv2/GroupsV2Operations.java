@@ -47,7 +47,7 @@ import java.util.UUID;
 public final class GroupsV2Operations {
 
   /** Used for undecryptable pending invites */
-  public static final UUID UNKNOWN_UUID = new UUID(0, 0);
+  public static final UUID UNKNOWN_UUID = UuidUtil.UNKNOWN_UUID;
 
   private final ServerPublicParams        serverPublicParams;
   private final ClientZkProfileOperations clientZkProfileOperations;
@@ -534,6 +534,13 @@ public final class GroupsV2Operations {
       return GroupChange.Actions.newBuilder()
                                 .setModifyAttributesAccess(GroupChange.Actions.ModifyAttributesAccessControlAction.newBuilder()
                                                                                                                   .setAttributesAccess(newRights));
+    }
+
+    public GroupChange.Actions.Builder createChangeMemberRole(UUID uuid, Member.Role role) {
+      return GroupChange.Actions.newBuilder()
+                                .addModifyMemberRoles(GroupChange.Actions.ModifyMemberRoleAction.newBuilder()
+                                                                         .setUserId(encryptUuid(uuid))
+                                                                         .setRole(role));
     }
   }
 

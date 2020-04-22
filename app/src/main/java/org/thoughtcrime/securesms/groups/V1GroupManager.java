@@ -15,12 +15,14 @@ import org.thoughtcrime.securesms.attachments.UriAttachment;
 import org.thoughtcrime.securesms.database.AttachmentDatabase;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.database.GroupDatabase;
+import org.thoughtcrime.securesms.database.RecipientDatabase;
 import org.thoughtcrime.securesms.database.ThreadDatabase;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.groups.GroupManager.GroupActionResult;
 import org.thoughtcrime.securesms.jobs.LeaveGroupJob;
 import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.mms.MmsException;
+import org.thoughtcrime.securesms.mms.OutgoingExpirationUpdateMessage;
 import org.thoughtcrime.securesms.mms.OutgoingGroupMediaMessage;
 import org.thoughtcrime.securesms.profiles.AvatarHelper;
 import org.thoughtcrime.securesms.providers.BlobProvider;
@@ -32,7 +34,6 @@ import org.thoughtcrime.securesms.util.BitmapUtil;
 import org.thoughtcrime.securesms.util.GroupUtil;
 import org.thoughtcrime.securesms.util.MediaUtil;
 import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.util.InvalidNumberException;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos.GroupContext;
 
 import java.io.ByteArrayInputStream;
@@ -87,7 +88,6 @@ final class V1GroupManager {
                                        @NonNull  Set<RecipientId> memberAddresses,
                                        @Nullable Bitmap           avatar,
                                        @Nullable String           name)
-      throws InvalidNumberException
   {
     final GroupDatabase groupDatabase    = DatabaseFactory.getGroupDatabase(context);
     final RecipientId   groupRecipientId = DatabaseFactory.getRecipientDatabase(context).getOrInsertFromGroupId(groupId);
@@ -174,5 +174,17 @@ final class V1GroupManager {
     } else {
       return false;
     }
+  }
+
+  @WorkerThread
+  static void updateGroupTimer(@NonNull Context context, @NonNull GroupId.V1 groupId, int expirationTime) {
+    RecipientDatabase recipientDatabase = DatabaseFactory.getRecipientDatabase(context);
+    ThreadDatabase    threadDatabase    = DatabaseFactory.getThreadDatabase(context);
+    Recipient         recipient         = Recipient.externalGroup(context, groupId);
+    long              threadId          = threadDatabase.getThreadIdFor(recipient);
+
+    recipientDatabase.setExpireMessages(recipient.getId(), expirationTime);
+    OutgoingExpirationUpdateMessage outgoingMessage = new OutgoingExpirationUpdateMessage(recipient, System.currentTimeMillis(), expirationTime * 1000L);
+    MessageSender.send(context, outgoingMessage, threadId, false, null);
   }
 }

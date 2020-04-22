@@ -12,18 +12,9 @@ import java.util.Collection;
 
 public abstract class GroupMemberEntry {
 
-            private final DefaultValueLiveData<Boolean> busy    = new DefaultValueLiveData<>(false);
-  @Nullable private       Runnable                      onClick;
+  private final DefaultValueLiveData<Boolean> busy = new DefaultValueLiveData<>(false);
 
   private GroupMemberEntry() {
-  }
-
-  public void setOnClick(@NonNull Runnable onClick) {
-    this.onClick = onClick;
-  }
-
-  public @Nullable Runnable getOnClick() {
-    return onClick;
   }
 
   public LiveData<Boolean> getBusy() {
@@ -37,13 +28,19 @@ public abstract class GroupMemberEntry {
   public final static class FullMember extends GroupMemberEntry {
 
     private final Recipient member;
+    private final boolean   removable;
 
-    public FullMember(@NonNull Recipient member) {
-      this.member = member;
+    public FullMember(@NonNull Recipient member, boolean removable) {
+      this.member    = member;
+      this.removable = removable;
     }
 
     public Recipient getMember() {
       return member;
+    }
+
+    public boolean isRemovable() {
+      return removable;
     }
   }
 
