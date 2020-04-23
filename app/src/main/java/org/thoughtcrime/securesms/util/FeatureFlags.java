@@ -56,6 +56,8 @@ public final class FeatureFlags {
   private static final String PROFILE_NAMES_MEGAPHONE    = "android.profileNamesMegaphone";
   private static final String ATTACHMENTS_V3             = "android.attachmentsV3";
   private static final String REMOTE_DELETE              = "android.remoteDelete";
+  private static final String PROFILE_SHARING_FOR_ALL    = "android.profileSharingForAll";
+  private static final String CALLING_PIP                = "android.callingPip";
 
   /**
    * We will only store remote values for flags in this set. If you want a flag to be controllable
@@ -70,7 +72,9 @@ public final class FeatureFlags {
       PROFILE_NAMES_MEGAPHONE,
       MESSAGE_REQUESTS,
       ATTACHMENTS_V3,
-      REMOTE_DELETE
+      REMOTE_DELETE,
+      PROFILE_SHARING_FOR_ALL,
+      CALLING_PIP
   );
 
   /**
@@ -224,6 +228,16 @@ public final class FeatureFlags {
   /** Send support for remotely deleting a message. */
   public static boolean remoteDelete() {
     return getValue(REMOTE_DELETE, false);
+  }
+
+  /** Whether or not phone number privacy is enabled */
+  public static boolean profileSharingForAll() {
+    return messageRequests() && getValue(PROFILE_SHARING_FOR_ALL, false);
+  }
+
+  /** Whether or not to display Calling PIP */
+  public static boolean callingPip() {
+    return getValue(CALLING_PIP, false);
   }
 
   /** Only for rendering debug info. */
