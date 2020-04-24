@@ -58,6 +58,7 @@ public final class FeatureFlags {
   private static final String REMOTE_DELETE              = "android.remoteDelete";
   private static final String PROFILE_SHARING_FOR_ALL    = "android.profileSharingForAll";
   private static final String CALLING_PIP                = "android.callingPip";
+  private static final String NEW_GROUP_UI               = "android.newGroupUI";
 
   /**
    * We will only store remote values for flags in this set. If you want a flag to be controllable
@@ -74,7 +75,8 @@ public final class FeatureFlags {
       ATTACHMENTS_V3,
       REMOTE_DELETE,
       PROFILE_SHARING_FOR_ALL,
-      CALLING_PIP
+      CALLING_PIP,
+      NEW_GROUP_UI
   );
 
   /**
@@ -238,6 +240,11 @@ public final class FeatureFlags {
   /** Whether or not to display Calling PIP */
   public static boolean callingPip() {
     return getValue(CALLING_PIP, false);
+  }
+
+  /** New group UI elements. */
+  public static boolean newGroupUI() {
+    return getValue(NEW_GROUP_UI, false);
   }
 
   /** Only for rendering debug info. */
