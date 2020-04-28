@@ -128,6 +128,7 @@ public final class LiveDataUtil {
 
     private synchronized void scheduleNext() {
       active = next;
+      next   = null;
       if (active != null) {
         executor.execute(active);
       }
