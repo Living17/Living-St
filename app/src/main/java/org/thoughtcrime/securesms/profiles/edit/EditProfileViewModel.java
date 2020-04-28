@@ -82,7 +82,7 @@ class EditProfileViewModel extends ViewModel {
   }
 
   public boolean canRemoveProfilePhoto() {
-    return !isGroup() || groupId.isV1();
+    return (!isGroup() || groupId.isV1()) && hasAvatar();
   }
 
   @MainThread

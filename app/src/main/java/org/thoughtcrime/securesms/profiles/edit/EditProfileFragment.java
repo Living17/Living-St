@@ -321,8 +321,8 @@ public class EditProfileFragment extends Fragment {
   }
 
   private void startAvatarSelection() {
-    AvatarSelectionBottomSheetDialogFragment.create(viewModel.hasAvatar(),
-                                                    viewModel.canRemoveProfilePhoto(),
+    AvatarSelectionBottomSheetDialogFragment.create(viewModel.canRemoveProfilePhoto(),
+                                                    true,
                                                     REQUEST_CODE_SELECT_AVATAR,
                                                     viewModel.isGroup())
                                             .show(getChildFragmentManager(), null);
