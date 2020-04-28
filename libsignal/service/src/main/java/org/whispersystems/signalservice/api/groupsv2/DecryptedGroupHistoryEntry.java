@@ -11,7 +11,7 @@ public final class DecryptedGroupHistoryEntry {
   private final DecryptedGroup       group;
   private final DecryptedGroupChange change;
 
-  DecryptedGroupHistoryEntry(DecryptedGroup group, DecryptedGroupChange change) {
+  public DecryptedGroupHistoryEntry(DecryptedGroup group, DecryptedGroupChange change) {
     if (group.getVersion() != change.getVersion()) {
       throw new AssertionError();
     }

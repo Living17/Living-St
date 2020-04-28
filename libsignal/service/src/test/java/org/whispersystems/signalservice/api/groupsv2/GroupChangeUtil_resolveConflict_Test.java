@@ -4,7 +4,6 @@ import com.google.protobuf.ByteString;
 
 import org.junit.Test;
 import org.signal.storageservice.protos.groups.AccessControl;
-import org.signal.storageservice.protos.groups.DisappearingMessagesTimer;
 import org.signal.storageservice.protos.groups.GroupChange;
 import org.signal.storageservice.protos.groups.Member;
 import org.signal.storageservice.protos.groups.PendingMember;
@@ -15,6 +14,7 @@ import org.signal.storageservice.protos.groups.local.DecryptedModifyMemberRole;
 import org.signal.storageservice.protos.groups.local.DecryptedPendingMember;
 import org.signal.storageservice.protos.groups.local.DecryptedPendingMemberRemoval;
 import org.signal.storageservice.protos.groups.local.DecryptedString;
+import org.signal.storageservice.protos.groups.local.DecryptedTimer;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.whispersystems.signalservice.api.util.UuidUtil;
@@ -370,10 +370,10 @@ public final class GroupChangeUtil_resolveConflict_Test {
   @Test
   public void field_12__timer_change_is_preserved() {
     DecryptedGroup       groupState      = DecryptedGroup.newBuilder()
-                                                         .setDisappearingMessagesTimer(DisappearingMessagesTimer.newBuilder().setDuration(123))
+                                                         .setDisappearingMessagesTimer(DecryptedTimer.newBuilder().setDuration(123))
                                                          .build();
     DecryptedGroupChange decryptedChange = DecryptedGroupChange.newBuilder()
-                                                               .setNewTimer(DisappearingMessagesTimer.newBuilder().setDuration(456))
+                                                               .setNewTimer(DecryptedTimer.newBuilder().setDuration(456))
                                                                .build();
     GroupChange.Actions  change          = GroupChange.Actions.newBuilder()
                                                               .setModifyDisappearingMessagesTimer(GroupChange.Actions.ModifyDisappearingMessagesTimerAction.newBuilder().setTimer(ByteString.EMPTY))
@@ -387,10 +387,10 @@ public final class GroupChangeUtil_resolveConflict_Test {
   @Test
   public void field_12__no_timer_change_is_removed() {
     DecryptedGroup       groupState      = DecryptedGroup.newBuilder()
-                                                         .setDisappearingMessagesTimer(DisappearingMessagesTimer.newBuilder().setDuration(123))
+                                                         .setDisappearingMessagesTimer(DecryptedTimer.newBuilder().setDuration(123))
                                                          .build();
     DecryptedGroupChange decryptedChange = DecryptedGroupChange.newBuilder()
-                                                               .setNewTimer(DisappearingMessagesTimer.newBuilder().setDuration(123))
+                                                               .setNewTimer(DecryptedTimer.newBuilder().setDuration(123))
                                                                .build();
     GroupChange.Actions  change          = GroupChange.Actions.newBuilder()
                                                               .setModifyDisappearingMessagesTimer(GroupChange.Actions.ModifyDisappearingMessagesTimerAction.newBuilder().setTimer(ByteString.EMPTY))

@@ -97,6 +97,8 @@ public final class GroupDatabase extends Database {
   private static final String[] GROUP_PROJECTION = {
       GROUP_ID, RECIPIENT_ID, TITLE, MEMBERS, AVATAR_ID, AVATAR_KEY, AVATAR_CONTENT_TYPE, AVATAR_RELAY, AVATAR_DIGEST,
       TIMESTAMP, ACTIVE, MMS
+      // TODO: GroupsV2, what is the projection, should my columns appear on it and what happens if they do not?
+    , V2_MASTER_KEY, V2_REVISION, V2_DECRYPTED_GROUP
   };
 
   static final List<String> TYPED_GROUP_PROJECTION = Stream.of(GROUP_PROJECTION).map(columnName -> TABLE_NAME + "." + columnName).toList();
@@ -267,13 +269,14 @@ public final class GroupDatabase extends Database {
     create(groupId, null, members, null, null, null, null);
   }
 
-  public void create(@NonNull GroupId.V2 groupId,
-                     @Nullable SignalServiceAttachmentPointer avatar,
-                     @Nullable String relay,
-                     @NonNull GroupMasterKey groupMasterKey,
-                     @NonNull DecryptedGroup groupState)
+  public GroupId.V2 create(@NonNull GroupMasterKey groupMasterKey,
+                           @NonNull DecryptedGroup groupState)
   {
-    create(groupId, groupState.getTitle(), Collections.emptyList(), avatar, relay, groupMasterKey, groupState);
+    GroupId.V2 groupId = GroupId.v2(groupMasterKey);
+
+    create(groupId, groupState.getTitle(), Collections.emptyList(), null, null, groupMasterKey, groupState);
+
+    return groupId;
   }
 
   /**
@@ -287,12 +290,14 @@ public final class GroupDatabase extends Database {
                       @Nullable GroupMasterKey groupMasterKey,
                       @Nullable DecryptedGroup groupState)
   {
-    List<RecipientId> members = new ArrayList<>(new HashSet<>(memberCollection));
+    RecipientDatabase recipientDatabase = DatabaseFactory.getRecipientDatabase(context);
+    RecipientId       groupRecipient    = recipientDatabase.getOrInsertFromGroupId(groupId);
+    List<RecipientId> members           = new ArrayList<>(new HashSet<>(memberCollection));
 
     Collections.sort(members);
 
     ContentValues contentValues = new ContentValues();
-    contentValues.put(RECIPIENT_ID, DatabaseFactory.getRecipientDatabase(context).getOrInsertFromGroupId(groupId).serialize());
+    contentValues.put(RECIPIENT_ID, groupRecipient.serialize());
     contentValues.put(GROUP_ID, groupId.toString());
     contentValues.put(TITLE, title);
     contentValues.put(MEMBERS, RecipientId.toSerializedList(members));
@@ -328,7 +333,10 @@ public final class GroupDatabase extends Database {
 
     databaseHelper.getWritableDatabase().insert(TABLE_NAME, null, contentValues);
 
-    RecipientId groupRecipient = DatabaseFactory.getRecipientDatabase(context).getOrInsertFromGroupId(groupId);
+    if (groupState != null && groupState.hasDisappearingMessagesTimer()) {
+      recipientDatabase.setExpireMessages(groupRecipient, groupState.getDisappearingMessagesTimer().getDuration());
+    }
+
     Recipient.live(groupRecipient).refresh();
 
     notifyConversationListListeners();
@@ -365,8 +373,10 @@ public final class GroupDatabase extends Database {
   }
 
   public void update(@NonNull GroupId.V2 groupId, @NonNull DecryptedGroup decryptedGroup) {
-    String        title         = decryptedGroup.getTitle();
-    ContentValues contentValues = new ContentValues();
+    RecipientDatabase recipientDatabase = DatabaseFactory.getRecipientDatabase(context);
+    RecipientId       groupRecipient    = recipientDatabase.getOrInsertFromGroupId(groupId);
+    String            title             = decryptedGroup.getTitle();
+    ContentValues     contentValues     = new ContentValues();
 
     contentValues.put(TITLE, title);
     contentValues.put(V2_REVISION, decryptedGroup.getVersion());
@@ -377,7 +387,10 @@ public final class GroupDatabase extends Database {
                                                 GROUP_ID + " = ?",
                                                 new String[]{ groupId.toString() });
 
-    RecipientId groupRecipient = DatabaseFactory.getRecipientDatabase(context).getOrInsertFromGroupId(groupId);
+    if (decryptedGroup.hasDisappearingMessagesTimer()) {
+      recipientDatabase.setExpireMessages(groupRecipient, decryptedGroup.getDisappearingMessagesTimer().getDuration());
+    }
+
     Recipient.live(groupRecipient).refresh();
 
     notifyConversationListListeners();
@@ -497,6 +510,21 @@ public final class GroupDatabase extends Database {
     Collections.sort(groupMembers);
 
     return RecipientId.toSerializedList(groupMembers);
+  }
+
+  public List<GroupId.V2> getAllGroupV2Ids() {
+    List<GroupId.V2> result = new LinkedList<>();
+
+    try (Cursor cursor = databaseHelper.getReadableDatabase().query(TABLE_NAME, new String[]{ GROUP_ID }, null, null, null, null, null)) {
+      if (cursor.moveToNext()) {
+        GroupId groupId = GroupId.parseOrThrow(cursor.getString(cursor.getColumnIndexOrThrow(GROUP_ID)));
+        if (groupId.isV2()) {
+          result.add(groupId.requireV2());
+        }
+      }
+    }
+
+    return result;
   }
 
   public static class Reader implements Closeable {

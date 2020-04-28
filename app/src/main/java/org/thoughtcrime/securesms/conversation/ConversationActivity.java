@@ -151,12 +151,14 @@ import org.thoughtcrime.securesms.giph.ui.GiphyActivity;
 import org.thoughtcrime.securesms.groups.GroupChangeFailedException;
 import org.thoughtcrime.securesms.groups.GroupInsufficientRightsException;
 import org.thoughtcrime.securesms.groups.GroupManager;
+import org.thoughtcrime.securesms.groups.GroupNotAMemberException;
 import org.thoughtcrime.securesms.groups.ui.LeaveGroupDialog;
 import org.thoughtcrime.securesms.groups.ui.managegroup.ManageGroupActivity;
 import org.thoughtcrime.securesms.groups.ui.pendingmemberinvites.PendingMemberInvitesActivity;
 import org.thoughtcrime.securesms.insights.InsightsLauncher;
 import org.thoughtcrime.securesms.invites.InviteReminderModel;
 import org.thoughtcrime.securesms.invites.InviteReminderRepository;
+import org.thoughtcrime.securesms.jobs.RequestGroupV2InfoJob;
 import org.thoughtcrime.securesms.jobs.RetrieveProfileJob;
 import org.thoughtcrime.securesms.jobs.ServiceOutageDetectionJob;
 import org.thoughtcrime.securesms.linkpreview.LinkPreview;
@@ -493,6 +495,10 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     setBlockedUserState(recipientSnapshot, isSecureText, isDefaultSms);
     setGroupShareProfileReminder(recipientSnapshot);
     calculateCharactersRemaining();
+
+    if (recipientSnapshot.getGroupId().isPresent() && recipientSnapshot.getGroupId().get().isV2()) {
+      ApplicationDependencies.getJobManager().add(new RequestGroupV2InfoJob(recipientSnapshot.getGroupId().get().requireV2()));
+    }
 
     MessageNotifier.setVisibleThread(threadId);
     markThreadAsRead();
@@ -947,7 +953,10 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
               } catch (GroupInsufficientRightsException e) {
                 Log.w(TAG, e);
                 return ConversationActivity.this.getString(R.string.ManageGroupActivity_you_dont_have_the_rights_to_do_this);
-              } catch (GroupChangeFailedException e) {
+              } catch (GroupNotAMemberException e) {
+                Log.w(TAG, e);
+                return ConversationActivity.this.getString(R.string.ManageGroupActivity_youre_not_a_member_of_the_group);
+              } catch (GroupChangeFailedException | IOException e) {
                 Log.w(TAG, e);
                 return ConversationActivity.this.getString(R.string.ManageGroupActivity_failed_to_update_the_group);
               }
@@ -2075,7 +2084,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
       return;
     }
 
-    if (recipient.isPushGroup() && !recipient.isProfileSharing()) {
+    if (recipient.isPushGroup() && !recipient.isProfileSharing() && !recipient.isPushV2Group()) {
       groupShareProfileView.get().setRecipient(recipient);
       groupShareProfileView.get().setVisibility(View.VISIBLE);
     } else if (groupShareProfileView.resolved()) {
