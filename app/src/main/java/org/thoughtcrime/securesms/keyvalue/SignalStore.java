@@ -95,4 +95,7 @@ public final class SignalStore {
   private static void putString(@NonNull String key, String value) {
     getStore().beginWrite().putString(key, value).apply();
   }
+
+  public static void gv2RemoteCredentials() {
+  }
 }

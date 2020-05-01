@@ -337,6 +337,7 @@ public class PushGroupSendJob extends PushSendJob {
   }
 
   private @NonNull List<RecipientId> getGroupMessageV2Recipients(@NonNull OutgoingGroupMediaMessage message) {
+    // TODO GV2 REVERT to V1 method - DO NOT store the whole group state
     UUID                                  selfUUId          = Recipient.self().getUuid().get();
     MessageGroupContext.GroupV2Properties groupV2Properties = message.requireGroupV2Properties();
     boolean                               includePending    = groupV2Properties.isUpdate();

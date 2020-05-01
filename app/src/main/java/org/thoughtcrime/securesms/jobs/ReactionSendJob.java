@@ -219,7 +219,6 @@ public class ReactionSendJob extends BaseJob {
       GroupUtil.setDataMessageGroupContext(context, dataMessage, conversationRecipient.requireGroupId().requirePush());
     }
 
-
     List<SendMessageResult> results = messageSender.sendMessage(addresses, unidentifiedAccess, false, dataMessage.build());
 
     Stream.of(results)

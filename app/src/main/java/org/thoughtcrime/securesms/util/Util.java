@@ -461,6 +461,12 @@ public class Util {
     }
   }
 
+  public static void assertNotMainThread() {
+    if (isMainThread()) {
+      throw new AssertionError("Not Main-thread assertion failed.");
+    }
+  }
+
   public static void postToMain(final @NonNull Runnable runnable) {
     getHandler().post(runnable);
   }

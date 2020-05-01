@@ -24,3 +24,61 @@ task qa {
             ':libsignal-service:test',
             ':Signal-Android:assemblePlayDebug'
 }
+
+
+//TODO GV2 REMOVE
+
+task syncService(type: Copy) {
+    from file("libsignal/")
+    include '**/*.*'
+    exclude '*.gradle'
+    into "/Users/alan/Signal-Android/libsignal"
+
+    eachFile {
+        println it
+    }
+}
+
+task syncFromService(type: Copy) {
+    from file("/Users/alan/Signal-Android/libsignal/")
+    include '**/*.*'
+    exclude '*.gradle'
+    into "libsignal/"
+
+    eachFile {
+        println it
+    }
+}
+
+task syncDatabase(type: Copy) {
+    from file("app/src/main/java/org/thoughtcrime/securesms/database/")
+    include '**/*.*'
+    exclude '*.gradle'
+    into "/Users/alan/Signal-Android/app/src/main/java/org/thoughtcrime/securesms/database/"
+
+    eachFile {
+        println it
+    }
+}
+
+task syncGroups(type: Copy) {
+    from file("app/src/main/java/org/thoughtcrime/securesms/groups/")
+    include '**/*.*'
+    exclude '*.gradle'
+    into "/Users/alan/Signal-Android/app/src/main/java/org/thoughtcrime/securesms/groups/"
+
+    eachFile {
+        println it
+    }
+}
+
+task syncGradle(type: Copy) {
+    from file(".")
+    include '**/*.gradle'
+    exclude '*.gradle'
+    into "/Users/alan/Signal-Android/"
+
+    eachFile {
+        println it
+    }
+}

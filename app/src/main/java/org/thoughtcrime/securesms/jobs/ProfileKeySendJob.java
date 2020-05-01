@@ -124,6 +124,7 @@ public class ProfileKeySendJob extends BaseJob {
                                                                                         .withProfileKey(Recipient.self().resolve().getProfileKey());
 
     if (conversationRecipient.isGroup()) {
+      // TODO GV2 We don't want to send profile keys like this in GV2, they should be sent as an update to the group
       dataMessage.asGroupMessage(new SignalServiceGroup(conversationRecipient.requireGroupId().getDecodedId()));
     }
 

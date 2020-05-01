@@ -2,9 +2,11 @@ package org.thoughtcrime.securesms.recipients.ui.bottomsheet;
 
 import android.app.Activity;
 import android.content.Context;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -12,6 +14,7 @@ import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 
 import org.thoughtcrime.securesms.BlockUnblockDialog;
+import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.RecipientPreferenceActivity;
 import org.thoughtcrime.securesms.VerifyIdentityActivity;
 import org.thoughtcrime.securesms.database.IdentityDatabase;
@@ -23,6 +26,8 @@ import org.thoughtcrime.securesms.recipients.RecipientUtil;
 import org.thoughtcrime.securesms.util.CommunicationActions;
 import org.thoughtcrime.securesms.util.livedata.LiveDataUtil;
 
+import java.util.Objects;
+
 final class RecipientDialogViewModel extends ViewModel {
 
   private final Context                                          context;
@@ -30,6 +35,7 @@ final class RecipientDialogViewModel extends ViewModel {
   private final LiveData<Recipient>                              recipient;
   private final MutableLiveData<IdentityDatabase.IdentityRecord> identity;
   private final LiveData<AdminActionStatus>                      adminActionStatus;
+  private final MutableLiveData<Boolean>                         adminActionBusy;
 
   private RecipientDialogViewModel(@NonNull Context context,
                                    @NonNull RecipientDialogRepository recipientDialogRepository)
@@ -37,6 +43,7 @@ final class RecipientDialogViewModel extends ViewModel {
     this.context                   = context;
     this.recipientDialogRepository = recipientDialogRepository;
     this.identity                  = new MutableLiveData<>();
+    this.adminActionBusy           = new MutableLiveData<>(false);
 
     boolean recipientIsSelf = recipientDialogRepository.getRecipientId().equals(Recipient.self().getId());
 
@@ -72,6 +79,10 @@ final class RecipientDialogViewModel extends ViewModel {
     return identity;
   }
 
+  LiveData<Boolean> getAdminActionBusy() {
+    return adminActionBusy;
+  }
+
   void onMessageClicked(@NonNull Activity activity) {
     recipientDialogRepository.getRecipient(recipient -> CommunicationActions.startConversation(activity, recipient, null));
   }
@@ -96,19 +107,58 @@ final class RecipientDialogViewModel extends ViewModel {
     activity.startActivity(RecipientPreferenceActivity.getLaunchIntent(activity, recipientDialogRepository.getRecipientId()));
   }
 
-  void onMakeGroupAdminClicked() {
-    // TODO GV2
-    throw new AssertionError("NYI");
+  void onMakeGroupAdminClicked(@NonNull Activity activity) {
+    new AlertDialog.Builder(activity)
+                   .setMessage(context.getString(R.string.RecipientBottomSheet_s_will_be_able_to_edit_group, Objects.requireNonNull(recipient.getValue()).toShortString(context)))
+                   .setPositiveButton(R.string.RecipientBottomSheet_make_group_admin,
+                                      (dialog, which) -> {
+                                        adminActionBusy.setValue(true);
+                                        recipientDialogRepository.setMemberAdmin(true, result -> {
+                                          adminActionBusy.setValue(false);
+                                          if (!result) {
+                                            Toast.makeText(activity, R.string.ManageGroupActivity_failed_to_update_the_group, Toast.LENGTH_SHORT).show();
+                                          }
+                                        });
+                                      })
+                   .setNegativeButton(android.R.string.cancel, (dialog, which) -> {})
+                   .show();
   }
 
-  void onRemoveGroupAdminClicked() {
-    // TODO GV2
-    throw new AssertionError("NYI");
+  void onRemoveGroupAdminClicked(@NonNull Activity activity) {
+    new AlertDialog.Builder(activity)
+                   .setMessage(context.getString(R.string.RecipientBottomSheet_remove_s_as_group_admin, Objects.requireNonNull(recipient.getValue()).toShortString(context)))
+                   .setPositiveButton(R.string.RecipientBottomSheet_remove_as_admin,
+                                      (dialog, which) -> {
+                                        adminActionBusy.setValue(true);
+                                        recipientDialogRepository.setMemberAdmin(false, result -> {
+                                          adminActionBusy.setValue(false);
+                                          if (!result) {
+                                            Toast.makeText(activity, R.string.ManageGroupActivity_failed_to_update_the_group, Toast.LENGTH_SHORT).show();
+                                          }
+                                        });
+                                      })
+                   .setNegativeButton(android.R.string.cancel, (dialog, which) -> {})
+                   .show();
   }
 
-  void onRemoveFromGroupClicked() {
-    // TODO GV2
-    throw new AssertionError("NYI");
+  void onRemoveFromGroupClicked(@NonNull Activity activity, @NonNull Runnable onSuccess) {
+    recipientDialogRepository.getGroupName(title ->
+      new AlertDialog.Builder(activity)
+                     .setMessage(context.getString(R.string.RecipientBottomSheet_remove_s_from_s, Objects.requireNonNull(recipient.getValue()).toShortString(context), title))
+                     .setPositiveButton(R.string.RecipientBottomSheet_remove,
+                                        (dialog, which) -> {
+                                          adminActionBusy.setValue(true);
+                                          recipientDialogRepository.removeMember(result -> {
+                                            adminActionBusy.setValue(false);
+                                            if (!result) {
+                                              Toast.makeText(activity, R.string.ManageGroupActivity_failed_to_update_the_group, Toast.LENGTH_SHORT).show();
+                                            } else {
+                                              onSuccess.run();
+                                            }
+                                          });
+                                        })
+                     .setNegativeButton(android.R.string.cancel, (dialog, which) -> {})
+                     .show());
   }
 
   static class AdminActionStatus {

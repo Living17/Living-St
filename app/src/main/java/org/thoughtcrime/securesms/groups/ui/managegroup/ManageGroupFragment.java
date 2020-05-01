@@ -148,11 +148,11 @@ public class ManageGroupFragment extends Fragment {
 
     viewModel.getTitle().observe(getViewLifecycleOwner(), groupTitle::setText);
     viewModel.getMemberCountSummary().observe(getViewLifecycleOwner(), memberCount::setText);
+    viewModel.getGroupRecipient().observe(getViewLifecycleOwner(), avatar::setRecipient);
 
     viewModel.getGroupViewState().observe(getViewLifecycleOwner(), vs -> {
       if (vs == null) return;
       photoRailLabel.setOnClickListener(v -> startActivity(MediaOverviewActivity.forThread(context, vs.getThreadId())));
-      avatar.setRecipient(vs.getGroupRecipient());
 
       setMediaCursorFactory(vs.getMediaCursorFactory());
 

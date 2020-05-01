@@ -7,8 +7,8 @@ public final class AppCapabilities {
   private AppCapabilities() {
   }
 
-  private static final boolean UUID_CAPABLE      = false;
-  private static final boolean GROUPS_V2_CAPABLE = false;
+  private static final boolean UUID_CAPABLE      = true;
+  private static final boolean GROUPS_V2_CAPABLE = true;
 
   /**
    * @param storageCapable Whether or not the user can use storage service. This is another way of

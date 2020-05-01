@@ -8,8 +8,12 @@ import androidx.annotation.WorkerThread;
 import androidx.core.util.Consumer;
 
 import org.thoughtcrime.securesms.database.DatabaseFactory;
+import org.thoughtcrime.securesms.groups.GroupChangeBusyException;
+import org.thoughtcrime.securesms.groups.GroupChangeFailedException;
 import org.thoughtcrime.securesms.groups.GroupId;
+import org.thoughtcrime.securesms.groups.GroupInsufficientRightsException;
 import org.thoughtcrime.securesms.groups.GroupManager;
+import org.thoughtcrime.securesms.groups.GroupNotAMemberException;
 import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.profiles.AvatarHelper;
 import org.thoughtcrime.securesms.profiles.ProfileName;
@@ -73,7 +77,7 @@ class EditPushGroupProfileRepository implements EditProfileRepository {
         GroupManager.updateGroup(context, groupId, avatar, displayName);
 
         return UploadResult.SUCCESS;
-      } catch (InvalidNumberException e) {
+      } catch (GroupChangeFailedException | GroupInsufficientRightsException | IOException | GroupNotAMemberException | GroupChangeBusyException e) {
         return UploadResult.ERROR_IO;
       }
 

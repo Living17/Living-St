@@ -55,9 +55,13 @@ import org.thoughtcrime.securesms.database.GroupDatabase;
 import org.thoughtcrime.securesms.database.GroupDatabase.GroupRecord;
 import org.thoughtcrime.securesms.database.RecipientDatabase;
 import org.thoughtcrime.securesms.database.ThreadDatabase;
+import org.thoughtcrime.securesms.groups.GroupChangeBusyException;
+import org.thoughtcrime.securesms.groups.GroupChangeFailedException;
 import org.thoughtcrime.securesms.groups.GroupId;
+import org.thoughtcrime.securesms.groups.GroupInsufficientRightsException;
 import org.thoughtcrime.securesms.groups.GroupManager;
 import org.thoughtcrime.securesms.groups.GroupManager.GroupActionResult;
+import org.thoughtcrime.securesms.groups.GroupNotAMemberException;
 import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.mediasend.AvatarSelectionActivity;
 import org.thoughtcrime.securesms.mediasend.AvatarSelectionBottomSheetDialogFragment;
@@ -78,7 +82,6 @@ import org.thoughtcrime.securesms.util.TextSecurePreferences;
 import org.thoughtcrime.securesms.util.ViewUtil;
 import org.thoughtcrime.securesms.util.task.ProgressDialogAsyncTask;
 import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.util.InvalidNumberException;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -167,14 +170,14 @@ public class GroupCreateActivity extends PassphraseRequiredActionBarActivity
       getSupportActionBar().setTitle(R.string.GroupCreateActivity_actionbar_mms_title);
     } else {
       enableSignalGroupViews();
-      getSupportActionBar().setTitle(groupToUpdate.isPresent()
-                                     ? R.string.GroupCreateActivity_actionbar_edit_title
-                                     : R.string.GroupCreateActivity_actionbar_title);
+      getSupportActionBar().setTitle(groupToUpdate.transform(g -> g.isV2 ? R.string.GroupCreateActivity_actionbar_manage_title
+                                                                         : R.string.GroupCreateActivity_actionbar_edit_title)
+                                                  .or(R.string.GroupCreateActivity_actionbar_title));
     }
   }
 
   private static boolean isActiveInDirectory(Recipient recipient) {
-    return recipient.resolve().getRegistered() == RecipientDatabase.RegisteredState.REGISTERED;
+    return recipient.getRegistered() == RecipientDatabase.RegisteredState.REGISTERED;
   }
 
   private void addSelectedContacts(@NonNull Recipient... recipients) {
@@ -205,7 +208,8 @@ public class GroupCreateActivity extends PassphraseRequiredActionBarActivity
     recipientsPanel.setPanelChangeListener(this);
     findViewById(R.id.contacts_button).setOnClickListener(new AddRecipientButtonListener());
     avatar.setImageDrawable(getDefaultGroupAvatar());
-    avatar.setOnClickListener(view -> AvatarSelectionBottomSheetDialogFragment.create(avatarBmp != null, false, REQUEST_CODE_SELECT_AVATAR, true).show(getSupportFragmentManager(), null));
+    boolean userCanClear = avatarBmp != null && !(groupToUpdate.isPresent() && groupToUpdate.get().id.isV2());
+    avatar.setOnClickListener(view -> AvatarSelectionBottomSheetDialogFragment.create(userCanClear, false, REQUEST_CODE_SELECT_AVATAR, true).show(getSupportFragmentManager(), null));
   }
 
   private Drawable getDefaultGroupAvatar() {
@@ -464,8 +468,8 @@ public class GroupCreateActivity extends PassphraseRequiredActionBarActivity
     @Override
     protected Optional<GroupActionResult> doInBackground(Void... aVoid) {
       try {
-        return Optional.of(GroupManager.updateGroup(activity, groupId, members, avatar, name));
-      } catch (InvalidNumberException e) {
+        return Optional.fromNullable(GroupManager.updateGroup(activity, groupId, members, BitmapUtil.toByteArray(avatar), name));
+      } catch (GroupChangeFailedException | GroupInsufficientRightsException | IOException | GroupNotAMemberException | GroupChangeBusyException e) {
         return Optional.absent();
       }
     }
@@ -503,10 +507,14 @@ public class GroupCreateActivity extends PassphraseRequiredActionBarActivity
 
     private GroupCreateActivity activity;
     private boolean             failIfNotPush;
+    private boolean             failIfNoUUID;
 
     public AddMembersTask(@NonNull GroupCreateActivity activity) {
       this.activity      = activity;
       this.failIfNotPush = activity.groupToUpdate.isPresent();
+      // without UUID, we cannot even invite them to a GV2
+      this.failIfNoUUID  = activity.groupToUpdate.transform(g -> g.isV2)
+                                                 .or(false);
     }
 
     @Override
@@ -514,11 +522,15 @@ public class GroupCreateActivity extends PassphraseRequiredActionBarActivity
       final List<Result> results = new LinkedList<>();
 
       for (Recipient recipient : recipients) {
+        recipient = recipient.resolve();
         boolean isPush = isActiveInDirectory(recipient);
 
         if (failIfNotPush && !isPush) {
           results.add(new Result(null, false, activity.getString(R.string.GroupCreateActivity_cannot_add_non_push_to_existing_group,
-                                                                 recipient.toShortString(activity))));
+                                                                                 recipient.toShortString(activity))));
+        } else if (failIfNoUUID && !recipient.isGv2Capable()) {
+          results.add(new Result(null, false, activity.getString(R.string.GroupCreateActivity_cannot_add_non_uuid_to_existing_group,
+                                                                                 recipient.toShortString(activity))));
         } else if (TextUtils.equals(TextSecurePreferences.getLocalNumber(activity), recipient.getE164().or(""))) {
           results.add(new Result(null, false, activity.getString(R.string.GroupCreateActivity_youre_already_in_the_group)));
         } else {
@@ -559,20 +571,23 @@ public class GroupCreateActivity extends PassphraseRequiredActionBarActivity
       final List<Recipient>       recipients       = db.getGroupMembers(groupIds[0], GroupDatabase.MemberSet.FULL_MEMBERS_EXCLUDING_SELF);
       final Optional<GroupRecord> group            = db.getGroup(groupIds[0]);
       final Set<Recipient>        existingContacts = new HashSet<>(recipients.size());
+      final Recipient             self             = Recipient.self();
       existingContacts.addAll(recipients);
 
       if (group.isPresent()) {
-        Bitmap avatar = null;
+        Bitmap tempAvatar = null;
         try {
-          avatar = BitmapFactory.decodeStream(AvatarHelper.getAvatar(getContext(), group.get().getRecipientId()));
+          tempAvatar = BitmapFactory.decodeStream(AvatarHelper.getAvatar(getContext(), group.get().getRecipientId()));
         } catch (IOException e) {
           Log.w(TAG, "Failed to read avatar.");
         }
-        return Optional.of(new GroupData(groupIds[0],
-                                         existingContacts,
-                                         avatar,
-                                         BitmapUtil.toByteArray(avatar),
-                                         group.get().getTitle()));
+        final Bitmap avatar = tempAvatar;
+        return group.transform(g -> new GroupData(groupIds[0],
+                                                  existingContacts,
+                                                  avatar,
+                                                  BitmapUtil.toByteArray(avatar),
+                                                  g.getTitle(),
+                                                  g.isAdmin(self)));
       } else {
         return Optional.absent();
       }
@@ -583,13 +598,15 @@ public class GroupCreateActivity extends PassphraseRequiredActionBarActivity
       super.onPostExecute(group);
 
       if (group.isPresent() && !activity.isFinishing()) {
+        GroupData groupData = group.get();
+
         activity.groupToUpdate = group;
 
-        activity.groupName.setText(group.get().name);
-        if (group.get().avatarBmp != null) {
-          activity.setAvatar(group.get().avatarBytes, group.get().avatarBmp);
+        activity.groupName.setText(groupData.name);
+        if (groupData.avatarBmp != null) {
+          activity.setAvatar(groupData.avatarBytes, groupData.avatarBmp);
         }
-        SelectedRecipientsAdapter adapter = new SelectedRecipientsAdapter(activity, group.get().recipients);
+        SelectedRecipientsAdapter adapter = new SelectedRecipientsAdapter(activity, groupData.recipients, groupData.isV2 && groupData.isAdmin);
         adapter.setOnRecipientDeletedListener(activity);
         activity.lv.setAdapter(adapter);
         activity.updateViewState();
@@ -608,18 +625,22 @@ public class GroupCreateActivity extends PassphraseRequiredActionBarActivity
   }
 
   private static class GroupData {
-    GroupId        id;
-    Set<Recipient> recipients;
-    Bitmap         avatarBmp;
-    byte[]         avatarBytes;
-    String         name;
-
-    GroupData(GroupId id, Set<Recipient> recipients, Bitmap avatarBmp, byte[] avatarBytes, String name) {
+    final GroupId        id;
+    final Set<Recipient> recipients;
+    final Bitmap         avatarBmp;
+    final byte[]         avatarBytes;
+    final String         name;
+    final boolean        isV2;
+    final boolean        isAdmin;
+    
+    GroupData(GroupId id, Set<Recipient> recipients, Bitmap avatarBmp, byte[] avatarBytes, String name, boolean isAdmin) {
       this.id          = id;
       this.recipients  = recipients;
       this.avatarBmp   = avatarBmp;
       this.avatarBytes = avatarBytes;
       this.name        = name;
+      this.isV2        = id.isV2();
+      this.isAdmin     = isAdmin;
     }
   }
 }

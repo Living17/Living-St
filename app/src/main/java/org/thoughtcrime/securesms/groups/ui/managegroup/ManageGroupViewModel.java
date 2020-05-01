@@ -42,6 +42,7 @@ public class ManageGroupViewModel extends ViewModel {
   private final LiveData<String>                            memberCountSummary;
   private final LiveData<GroupAccessControl>                editMembershipRights;
   private final LiveData<GroupAccessControl>                editGroupAttributesRights;
+  private final LiveData<Recipient>                         groupRecipient;
   private final MutableLiveData<GroupViewState>             groupViewState            = new MutableLiveData<>(null);
   private final LiveData<MuteState>                         muteState;
   private final LiveData<Boolean>                           hasCustomNotifications;
@@ -63,9 +64,10 @@ public class ManageGroupViewModel extends ViewModel {
     this.editGroupAttributesRights = liveGroup.getAttributesAccessControl();
     this.disappearingMessageTimer  = Transformations.map(liveGroup.getExpireMessages(), expiration -> ExpirationUtil.getExpirationDisplayValue(context, expiration));
     this.canEditGroupAttributes    = liveGroup.selfCanEditGroupAttributes();
-    this.muteState                 = Transformations.map(liveGroup.getGroupRecipient(),
+    this.groupRecipient            = liveGroup.getGroupRecipient();
+    this.muteState                 = Transformations.map(this.groupRecipient,
                                                          recipient -> new MuteState(recipient.getMuteUntil(), recipient.isMuted()));
-    this.hasCustomNotifications    = Transformations.map(liveGroup.getGroupRecipient(),
+    this.hasCustomNotifications    = Transformations.map(this.groupRecipient,
                                                          recipient -> recipient.getNotificationChannel() != null);
   }
 
@@ -86,6 +88,10 @@ public class ManageGroupViewModel extends ViewModel {
 
   LiveData<String> getMemberCountSummary() {
     return memberCountSummary;
+  }
+
+  public LiveData<Recipient> getGroupRecipient() {
+    return groupRecipient;
   }
 
   LiveData<GroupViewState> getGroupViewState() {
