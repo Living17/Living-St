@@ -40,6 +40,10 @@ public final class SignalStore {
     return new StorageServiceValues(getStore());
   }
 
+  public static @NonNull GroupsV2AuthorizationSignalStoreCache groupsV2AuthorizationSignalStoreCache() {
+    return new GroupsV2AuthorizationSignalStoreCache(getStore());
+  }
+
   public static long getLastPrekeyRefreshTime() {
     return getStore().getLong(LAST_PREKEY_REFRESH_TIME, 0);
   }
@@ -94,5 +98,8 @@ public final class SignalStore {
 
   private static void putString(@NonNull String key, String value) {
     getStore().beginWrite().putString(key, value).apply();
+  }
+
+  public static void gv2RemoteCredentials() {
   }
 }

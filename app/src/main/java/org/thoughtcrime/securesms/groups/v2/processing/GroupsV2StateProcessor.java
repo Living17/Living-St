@@ -19,6 +19,7 @@ import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.groups.GroupId;
 import org.thoughtcrime.securesms.groups.GroupNotAMemberException;
 import org.thoughtcrime.securesms.groups.GroupProtoUtil;
+import org.thoughtcrime.securesms.groups.GroupsV2Authorization;
 import org.thoughtcrime.securesms.groups.v2.ProfileKeySet;
 import org.thoughtcrime.securesms.jobmanager.JobManager;
 import org.thoughtcrime.securesms.jobs.AvatarGroupsV2DownloadJob;
@@ -28,10 +29,11 @@ import org.thoughtcrime.securesms.mms.MmsException;
 import org.thoughtcrime.securesms.mms.OutgoingGroupMediaMessage;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
+import org.thoughtcrime.securesms.util.GroupUtil;
+import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupHistoryEntry;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Api;
-import org.whispersystems.signalservice.api.groupsv2.GroupsV2Authorization;
 import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.internal.push.exceptions.NotInGroupException;
 
@@ -132,7 +134,16 @@ public final class GroupsV2StateProcessor {
         return new GroupUpdateResult(GroupState.GROUP_CONSISTENT_OR_AHEAD, null);
       }
 
-      GlobalGroupState        inputGroupState         = queryServer();
+      GlobalGroupState        inputGroupState         = null;
+      try {
+        inputGroupState = queryServer();
+      } catch (GroupNotAMemberException e) {
+        // TODO: GV2 Insert our own fake update message as we can't get that state from the server
+
+        insertGroupLeave();
+
+        throw e;
+      }
       AdvanceGroupStateResult advanceGroupStateResult = GroupStateMapper.partiallyAdvanceGroupState(inputGroupState, revision);
       DecryptedGroup          newLocalState           = advanceGroupStateResult.getNewGlobalGroupState().getLocalState();
 
@@ -150,6 +161,26 @@ public final class GroupsV2StateProcessor {
       }
 
       return new GroupUpdateResult(GroupState.GROUP_UPDATED, newLocalState);
+    }
+
+    private void insertGroupLeave() {
+       // TODO! GV2
+      Recipient groupRecipient = Recipient.externalGroup(context, groupId);
+      long threadId = DatabaseFactory.getThreadDatabase(context).getThreadIdFor(groupRecipient);
+      Optional<OutgoingGroupMediaMessage> leaveMessage = GroupUtil.createGroupLeaveMessage(context, groupRecipient); //TODO GV2 Warning, this is a GV1 !
+
+      if (threadId != -1 && leaveMessage.isPresent()) {
+        try {
+          long id = DatabaseFactory.getMmsDatabase(context).insertMessageOutbox(leaveMessage.get(), threadId, false, null);
+          DatabaseFactory.getMmsDatabase(context).markAsSent(id, true);
+        } catch (MmsException e) {
+          Log.w(TAG, "Failed to insert leave message.", e);
+        }
+
+        GroupDatabase groupDatabase = DatabaseFactory.getGroupDatabase(context);
+        groupDatabase.setActive(groupId, false);
+        groupDatabase.remove(groupId, Recipient.self().getId());
+      }
     }
 
     /**
@@ -217,7 +248,7 @@ public final class GroupsV2StateProcessor {
                                                     .orNull();
 
       try {
-        latestServerGroup = groupsV2Api.getGroup(groupSecretParams, groupsV2Authorization);
+        latestServerGroup = groupsV2Api.getGroup(groupSecretParams, groupsV2Authorization.getAuthorizationForToday(selfUuid, groupSecretParams));
       } catch (NotInGroupException e) {
         throw new GroupNotAMemberException(e);
       } catch (VerificationFailedException | InvalidGroupStateException e) {
@@ -238,7 +269,7 @@ public final class GroupsV2StateProcessor {
 
     private List<GroupLogEntry> getFullMemberHistory(@NonNull UUID selfUuid, int logsNeededFrom) throws IOException {
       try {
-        Collection<DecryptedGroupHistoryEntry> groupStatesFromRevision = groupsV2Api.getGroupHistory(groupSecretParams, logsNeededFrom, groupsV2Authorization);
+        Collection<DecryptedGroupHistoryEntry> groupStatesFromRevision = groupsV2Api.getGroupHistory(groupSecretParams, logsNeededFrom, groupsV2Authorization.getAuthorizationForToday(selfUuid, groupSecretParams));
         ArrayList<GroupLogEntry>               history                 = new ArrayList<>(groupStatesFromRevision.size());
 
         for (DecryptedGroupHistoryEntry entry : groupStatesFromRevision) {

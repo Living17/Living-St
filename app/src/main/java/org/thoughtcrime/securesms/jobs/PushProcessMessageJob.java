@@ -12,6 +12,8 @@ import androidx.annotation.Nullable;
 import com.annimon.stream.Collectors;
 import com.annimon.stream.Stream;
 
+import org.signal.zkgroup.VerificationFailedException;
+import org.signal.zkgroup.groups.GroupMasterKey;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.thoughtcrime.securesms.ApplicationContext;
 import org.thoughtcrime.securesms.attachments.Attachment;
@@ -45,7 +47,9 @@ import org.thoughtcrime.securesms.database.model.StickerRecord;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.groups.BadGroupIdException;
 import org.thoughtcrime.securesms.groups.GroupId;
+import org.thoughtcrime.securesms.groups.GroupNotAMemberException;
 import org.thoughtcrime.securesms.groups.GroupV1MessageProcessor;
+import org.thoughtcrime.securesms.groups.v2.processing.GroupsV2StateProcessor;
 import org.thoughtcrime.securesms.jobmanager.Data;
 import org.thoughtcrime.securesms.jobmanager.Job;
 import org.thoughtcrime.securesms.jobmanager.JobManager;
@@ -84,12 +88,14 @@ import org.thoughtcrime.securesms.util.RemoteDeleteUtil;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
 import org.whispersystems.libsignal.state.SessionStore;
 import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.groupsv2.InvalidGroupStateException;
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment;
 import org.whispersystems.signalservice.api.messages.SignalServiceContent;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage.Preview;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
+import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
 import org.whispersystems.signalservice.api.messages.SignalServiceReceiptMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceTypingMessage;
 import org.whispersystems.signalservice.api.messages.calls.AnswerMessage;
@@ -119,6 +125,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 public final class PushProcessMessageJob extends BaseJob {
 
@@ -234,7 +241,7 @@ public final class PushProcessMessageJob extends BaseJob {
   }
 
   @Override
-  public void onRun() {
+  public void onRun() throws Exception {
     Optional<Long> optionalSmsMessageId = smsMessageId > 0 ? Optional.of(smsMessageId) : Optional.absent();
 
     if (messageState == MessageState.DECRYPTED_OK) {
@@ -248,14 +255,16 @@ public final class PushProcessMessageJob extends BaseJob {
 
   @Override
   public boolean onShouldRetry(@NonNull Exception exception) {
-    return false;
+    return exception instanceof IOException;
   }
 
   @Override
   public void onFailure() {
   }
 
-  private void handleMessage(@Nullable SignalServiceContent content, @NonNull Optional<Long> smsMessageId) {
+  private void handleMessage(@Nullable SignalServiceContent content, @NonNull Optional<Long> smsMessageId)
+    throws VerificationFailedException, IOException, InvalidGroupStateException
+  {
     try {
       GroupDatabase groupDatabase = DatabaseFactory.getGroupDatabase(context);
 
@@ -271,14 +280,22 @@ public final class PushProcessMessageJob extends BaseJob {
         boolean                  isGv2Message   = groupId.isPresent() && groupId.get().isV2();
 
         if (isGv2Message) {
-          Log.w(TAG, "Ignoring GV2 message.");
-          return;
+          if (!groupV2PreProcessMessage(content, message.getGroupContext().get().getGroupV2().get())) {
+            Log.i(TAG, "Ignoring GV2 message.");
+            return;
+          }
+          // TODO: GV2 Need to more efficiently check for group membership
+          Recipient sender = Recipient.externalPush(context, content.getSender());
+          if (!groupDatabase.isCurrentMember(groupId.get().requirePush(), sender.getId())) {
+            Log.i(TAG, "Ignoring GV2 message from member not in group");
+            return;
+          }
         }
 
         if      (isInvalidMessage(message))             handleInvalidMessage(content.getSender(), content.getSenderDevice(), groupId, content.getTimestamp(), smsMessageId);
         else if (message.isEndSession())                handleEndSessionMessage(content, smsMessageId);
         else if (message.isGroupV1Update())             handleGroupV1Message(content, message, smsMessageId);
-        else if (message.isExpirationUpdate())          handleExpirationUpdate(content, message, smsMessageId);
+        else if (message.isExpirationUpdate())          { if (!isGv2Message) handleExpirationUpdate(content, message, smsMessageId); else Log.w(TAG, "Expiration update received for GV2"); }
         else if (message.getReaction().isPresent())     handleReaction(content, message);
         else if (message.getRemoteDelete().isPresent()) handleRemoteDelete(content, message);
         else if (isMediaMessage)                        handleMediaMessage(content, message, smsMessageId);
@@ -345,6 +362,33 @@ public final class PushProcessMessageJob extends BaseJob {
       handleCorruptMessage(e.getSender(), e.getSenderDevice(), timestamp, smsMessageId);
     } catch (BadGroupIdException e) {
       Log.w(TAG, "Ignoring message with bad group id", e);
+    }
+  }
+
+  /** Returns true iff group is inserted, updated, or already consistent */
+  private boolean groupV2PreProcessMessage(@NonNull SignalServiceContent content,
+                                           @NonNull SignalServiceGroupV2 groupV2)
+    throws IOException
+  {
+    GroupMasterKey masterKey = groupV2.getMasterKey();
+    GroupsV2StateProcessor.GroupUpdateResult groupUpdateResult = null;
+    try {
+      groupUpdateResult = new GroupsV2StateProcessor(context).forGroup(masterKey)
+        //TODO: GV2 AND-209 content is available, but I fear it sometimes caused de-duping and sometimes not seeing updates
+        // I also like how there is no difference between a update as result of message and update as result of, say, opening the group
+        // it does hide new message indicator though, as appears as outgoing, so I dunno.
+                                                                     .updateLocalGroupToRevision(groupV2.getRevision(), content.getTimestamp());
+    } catch (GroupNotAMemberException e) {
+      //TODO: GV2 TEST scenario
+      Log.w(TAG, "Ignoring message for a group we're not in");
+      return false;
+    }
+
+    switch (groupUpdateResult.getGroupState()) {
+      case INCONSISTENT : return false;
+      case GROUP_UPDATED:
+      case GROUP_CONSISTENT_OR_AHEAD: return true;
+      default: throw new AssertionError();
     }
   }
 
@@ -552,6 +596,13 @@ public final class PushProcessMessageJob extends BaseJob {
       throws StorageFailedException, BadGroupIdException
   {
     GroupV1MessageProcessor.process(context, content, message, false);
+    if (message.getGroupContext().get().getGroupV2().isPresent()) {
+      // TODO GV2 remove logging AND-199
+      Log.d(TAG, "GV2 message dropped");
+      return;
+    }
+
+    GroupV1MessageProcessor.process(context, content, message, false);
 
     if (message.getExpiresInSeconds() != 0 && message.getExpiresInSeconds() != getMessageDestination(content, message).getExpireMessages()) {
       handleExpirationUpdate(content, message, Optional.absent());
@@ -583,29 +634,47 @@ public final class PushProcessMessageJob extends BaseJob {
                                       @NonNull Optional<Long> smsMessageId)
       throws StorageFailedException, BadGroupIdException
   {
-    try {
-      MmsDatabase          database     = DatabaseFactory.getMmsDatabase(context);
-      Recipient            sender       = Recipient.externalPush(context, content.getSender());
-      Recipient            recipient    = getMessageDestination(content, message);
-      IncomingMediaMessage mediaMessage = new IncomingMediaMessage(sender.getId(),
-                                                                   message.getTimestamp(),
-                                                                   content.getServerTimestamp(),
-                                                                   -1,
-                                                                   message.getExpiresInSeconds() * 1000L,
-                                                                   true,
-                                                                   false,
-                                                                   content.isNeedsReceipt(),
-                                                                   Optional.absent(),
-                                                                   message.getGroupContext(),
-                                                                   Optional.absent(),
-                                                                   Optional.absent(),
-                                                                   Optional.absent(),
-                                                                   Optional.absent(),
-                                                                   Optional.absent());
+    int                                 expiresInSeconds = message.getExpiresInSeconds();
+    Optional<SignalServiceGroupContext> groupContext     = message.getGroupContext();
 
+    handleExpirationUpdate(content, smsMessageId, groupContext, expiresInSeconds);
+  }
+
+  private void handleExpirationUpdate(@NonNull SignalServiceContent content,
+                                      @NonNull Optional<Long> smsMessageId,
+                                      @NonNull Optional<SignalServiceGroupContext> groupContext,
+                                      int expiresInSeconds)
+      throws StorageFailedException, BadGroupIdException
+  {
+    Recipient recipient = getMessageDestination(content, groupContext);
+
+    if (recipient.getExpireMessages() == expiresInSeconds) {
+      Log.d("ALAN", "No change in message expiry.");
+      return;
+    }
+
+    Recipient            sender       = Recipient.externalPush(context, content.getSender());
+    MmsDatabase          database     = DatabaseFactory.getMmsDatabase(context);
+    IncomingMediaMessage mediaMessage = new IncomingMediaMessage(sender.getId(),
+                                                                 content.getTimestamp(),
+                                                                 content.getServerTimestamp(),
+                                                                 -1,
+                                                                 expiresInSeconds * 1000L,
+                                                                  true,
+                                                                 false,
+                                                                 content.isNeedsReceipt(),
+                                                                 Optional.absent(),
+                                                                 groupContext,
+                                                                 Optional.absent(),
+                                                                 Optional.absent(),
+                                                                 Optional.absent(),
+                                                                 Optional.absent(),
+                                                                 Optional.absent());
+
+    try {
         database.insertSecureDecryptedMessageInbox(mediaMessage, -1);
 
-        DatabaseFactory.getRecipientDatabase(context).setExpireMessages(recipient.getId(), message.getExpiresInSeconds());
+        DatabaseFactory.getRecipientDatabase(context).setExpireMessages(recipient.getId(), expiresInSeconds);
 
       if (smsMessageId.isPresent()) {
         DatabaseFactory.getSmsDatabase(context).deleteMessage(smsMessageId.get());
@@ -769,7 +838,7 @@ public final class PushProcessMessageJob extends BaseJob {
 
   private void handleSynchronizeSentMessage(@NonNull SignalServiceContent content,
                                             @NonNull SentTranscriptMessage message)
-      throws StorageFailedException, BadGroupIdException
+      throws StorageFailedException, BadGroupIdException, VerificationFailedException, IOException, InvalidGroupStateException
   {
     try {
       GroupDatabase groupDatabase = DatabaseFactory.getGroupDatabase(context);
@@ -796,8 +865,7 @@ public final class PushProcessMessageJob extends BaseJob {
         threadId = handleSynchronizeSentTextMessage(message);
       }
 
-      if (message.getMessage().getGroupContext().isPresent() && groupDatabase.isUnknownGroup(GroupUtil.idFromGroupContext(message.getMessage().getGroupContext().get()))) {
-        handleUnknownGroupMessage(content, message.getMessage().getGroupContext().get());
+      if (message.getMessage().getGroupContext().isPresent() && groupDatabase.isUnknownGroup(GroupUtil.idFromGroupContext(message.getMessage().getGroupContext().get()))) {        handleUnknownGroupMessage(content, message.getMessage().getGroupContext().get());
       }
 
       if (message.getMessage().getProfileKey().isPresent()) {
@@ -1108,7 +1176,7 @@ public final class PushProcessMessageJob extends BaseJob {
     String      body      = message.getBody().isPresent() ? message.getBody().get() : "";
     Recipient   recipient = getMessageDestination(content, message);
 
-    if (message.getExpiresInSeconds() != recipient.getExpireMessages()) {
+    if (groupId.isPresent() && groupId.get().isV1() && message.getExpiresInSeconds() != recipient.getExpireMessages()) {
       handleExpirationUpdate(content, message, Optional.absent());
     }
 
@@ -1578,7 +1646,19 @@ public final class PushProcessMessageJob extends BaseJob {
       throws BadGroupIdException
   {
     return getGroupRecipient(message.getGroupContext())
-           .or(() -> Recipient.externalPush(context, content.getSender()));
+           .or(() -> getMessageSender(content));
+  }
+
+  private Recipient getMessageDestination(@NonNull SignalServiceContent content,
+                                          @NonNull Optional<SignalServiceGroupContext> groupContext)
+      throws BadGroupIdException
+  {
+    return getGroupRecipient(groupContext)
+           .or(() -> getMessageSender(content));
+  }
+
+  private Recipient getMessageSender(@NonNull SignalServiceContent content) {
+    return Recipient.externalPush(context, content.getSender());
   }
 
   private Optional<Recipient> getGroupRecipient(Optional<SignalServiceGroupContext> message)
