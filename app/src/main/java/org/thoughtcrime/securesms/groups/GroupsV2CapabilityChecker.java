@@ -76,6 +76,7 @@ final class GroupsV2CapabilityChecker {
         Log.i(TAG, "At least one recipient does not support UUID, capability was " + uuidCapability);
         if (GV2DebugFlags.SKIP_UUID_CAPABILITY_CHECK) {
           Log.i(TAG, "CHECK SKIPPED");
+        } else {
           return false;
         }
       }
