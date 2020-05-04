@@ -183,10 +183,21 @@ public class WebRtcCallView extends FrameLayout {
   }
 
   public void setRemoteVideoEnabled(boolean isRemoteVideoEnabled) {
+    boolean wasRemoteVideoEnabled = remoteRenderContainer.getVisibility() == View.VISIBLE;
+
+    shouldFadeControls = isRemoteVideoEnabled;
+
     if (isRemoteVideoEnabled) {
       remoteRenderContainer.setVisibility(View.VISIBLE);
     } else {
       remoteRenderContainer.setVisibility(View.GONE);
+    }
+
+    if (shouldFadeControls && !wasRemoteVideoEnabled) {
+      fadeInControls();
+    } else if (!shouldFadeControls && wasRemoteVideoEnabled) {
+      fadeOutControls();
+      cancelFadeOut();
     }
   }
 
@@ -266,9 +277,6 @@ public class WebRtcCallView extends FrameLayout {
   }
 
   public void setWebRtcControls(WebRtcControls webRtcControls) {
-    boolean wasFadingControls = shouldFadeControls;
-
-    shouldFadeControls = false;
     answerWithVoiceGroup.setVisibility(View.GONE);
 
     switch (webRtcControls) {
@@ -298,21 +306,13 @@ public class WebRtcCallView extends FrameLayout {
         ongoingCallButtons.setVisibility(View.VISIBLE);
         break;
       case CONNECTED:
-        shouldFadeControls = true;
-        if (!wasFadingControls) {
-          setTopViewsVisibility(View.VISIBLE);
-          incomingCallButtons.setVisibility(View.GONE);
-          ongoingCallButtons.setVisibility(View.VISIBLE);
+        setTopViewsVisibility(View.VISIBLE);
+        incomingCallButtons.setVisibility(View.GONE);
+        ongoingCallButtons.setVisibility(View.VISIBLE);
 
-          post(() -> {
-            scheduleFadeOut();
-            pictureInPictureGestureHelper.setVerticalBoundaries(status.getBottom(), speakerToggle.getTop());
-          });
-        }
-    }
-
-    if (!shouldFadeControls) {
-      cancelFadeOut();
+        post(() -> {
+          pictureInPictureGestureHelper.setVerticalBoundaries(status.getBottom(), speakerToggle.getTop());
+        });
     }
   }
 
