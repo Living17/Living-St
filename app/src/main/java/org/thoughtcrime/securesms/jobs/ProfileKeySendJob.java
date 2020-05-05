@@ -10,6 +10,7 @@ import com.annimon.stream.Stream;
 import org.thoughtcrime.securesms.crypto.UnidentifiedAccessUtil;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
+import org.thoughtcrime.securesms.groups.GroupManager;
 import org.thoughtcrime.securesms.jobmanager.Data;
 import org.thoughtcrime.securesms.jobmanager.Job;
 import org.thoughtcrime.securesms.logging.Log;
@@ -124,6 +125,7 @@ public class ProfileKeySendJob extends BaseJob {
                                                                                         .withProfileKey(Recipient.self().resolve().getProfileKey());
 
     if (conversationRecipient.isGroup()) {
+      // TODO GV2 We don't want to send profile keys like this in GV2, they should be sent as an update to the group
       dataMessage.asGroupMessage(new SignalServiceGroup(conversationRecipient.requireGroupId().getDecodedId()));
     }
 

@@ -88,6 +88,13 @@ public class StorageSyncJob extends BaseJob {
 
   @Override
   protected void onRun() throws IOException, RetryLaterException {
+
+    //TODO GV2 REENABLE
+    if (true) {
+      Log.w("ALAN", "No GV2 syncing has been written");
+      return;
+    }
+
     if (!FeatureFlags.pinsForAll()) {
       Log.i(TAG, "Not enabled. Skipping.");
       return;

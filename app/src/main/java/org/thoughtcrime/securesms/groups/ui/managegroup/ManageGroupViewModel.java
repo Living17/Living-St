@@ -1,7 +1,6 @@
 package org.thoughtcrime.securesms.groups.ui.managegroup;
 
 import android.content.Context;
-import android.content.Intent;
 import android.database.Cursor;
 import android.widget.Toast;
 
@@ -15,11 +14,7 @@ import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 
 import org.thoughtcrime.securesms.BlockUnblockDialog;
-import org.thoughtcrime.securesms.ContactSelectionListFragment;
 import org.thoughtcrime.securesms.ExpirationDialog;
-import org.thoughtcrime.securesms.GroupCreateActivity;
-import org.thoughtcrime.securesms.PushContactSelectionActivity;
-import org.thoughtcrime.securesms.contacts.ContactsCursorLoader;
 import org.thoughtcrime.securesms.database.MediaDatabase;
 import org.thoughtcrime.securesms.database.loaders.MediaLoader;
 import org.thoughtcrime.securesms.database.loaders.ThreadMediaLoader;
@@ -181,7 +176,7 @@ public class ManageGroupViewModel extends ViewModel {
   }
 
   @WorkerThread
-  private void showErrorToast(@NonNull ManageGroupRepository.FailureReason e) {
+  private void showErrorToast(@NonNull FailureReason e) {
     Util.runOnMain(() -> Toast.makeText(context, e.getToastMessage(), Toast.LENGTH_LONG).show());
   }
 

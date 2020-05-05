@@ -1,10 +1,9 @@
 package org.thoughtcrime.securesms.groups;
 
-import android.content.Context;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 
+import org.GV2DebugFlags;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.jobs.RetrieveProfileJob;
 import org.thoughtcrime.securesms.logging.Log;
@@ -38,12 +37,32 @@ final class GroupsV2CapabilityChecker {
   boolean allSupportGroupsV2AndUuid(@NonNull Collection<RecipientId> recipientIds)
       throws IOException
   {
+    if (GV2DebugFlags.SKIP_CAPABILITY_CHECK) return true;
+
     final HashSet<RecipientId> recipientIdsSet = new HashSet<>(recipientIds);
+
+    if (GV2DebugFlags.EXTRA_LOGGING_AND199) {
+      for (RecipientId recipientId : recipientIdsSet) {
+        Recipient member = Recipient.resolved(recipientId);
+        Log.d("ALAN", String.format("Capability: %s %s", member.toShortString(ApplicationDependencies.getApplication()), member.getGroupsV2Capability()));
+      }
+    }
 
     for (RecipientId recipientId : recipientIdsSet) {
       Recipient            member         = Recipient.resolved(recipientId);
       Recipient.Capability gv2Capability  = member.getGroupsV2Capability();
       Recipient.Capability uuidCapability = member.getUuidCapability();
+
+      if (GV2DebugFlags.FORCE_SELF_CAPABILITIES) {
+        if (member.isLocalNumber() && gv2Capability != Recipient.Capability.SUPPORTED) {
+          Log.d("ALAN", String.format("Forcing own gv2 capability from %s to %s", gv2Capability, Recipient.Capability.SUPPORTED));
+          gv2Capability = Recipient.Capability.SUPPORTED;
+        }
+        if (member.isLocalNumber() && uuidCapability != Recipient.Capability.SUPPORTED) {
+          Log.d("ALAN", String.format("Forcing own uuid capability from %s to %s", uuidCapability, Recipient.Capability.SUPPORTED));
+          uuidCapability = Recipient.Capability.SUPPORTED;
+        }
+      }
 
       if (gv2Capability == Recipient.Capability.UNKNOWN || uuidCapability == Recipient.Capability.UNKNOWN) {
         if (!ApplicationDependencies.getJobManager().runSynchronously(RetrieveProfileJob.forRecipient(member), TimeUnit.SECONDS.toMillis(1000)).isPresent()) {
@@ -58,7 +77,11 @@ final class GroupsV2CapabilityChecker {
 
       if (uuidCapability != Recipient.Capability.SUPPORTED) {
         Log.i(TAG, "At least one recipient does not support UUID, capability was " + uuidCapability);
-        return false;
+        if (GV2DebugFlags.SKIP_UUID_CAPABILITY_CHECK) {
+          Log.i(TAG, "CHECK SKIPPED");
+        } else {
+          return false;
+        }
       }
     }
 

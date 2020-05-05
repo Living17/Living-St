@@ -17,22 +17,38 @@
 package org.thoughtcrime.securesms.database.model;
 
 import android.content.Context;
-import androidx.annotation.NonNull;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
 
+import androidx.annotation.NonNull;
+
+import com.google.protobuf.ByteString;
+
+import org.GV2DebugFlags;
+import org.signal.storageservice.protos.groups.local.DecryptedGroup;
+import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
+import org.signal.storageservice.protos.groups.local.DecryptedPendingMember;
 import org.thoughtcrime.securesms.R;
+import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.database.MmsSmsColumns;
+import org.thoughtcrime.securesms.database.RecipientDatabase;
 import org.thoughtcrime.securesms.database.SmsDatabase;
 import org.thoughtcrime.securesms.database.documents.IdentityKeyMismatch;
 import org.thoughtcrime.securesms.database.documents.NetworkFailure;
+import org.thoughtcrime.securesms.database.model.databaseprotos.DecryptedGroupV2Context;
 import org.thoughtcrime.securesms.recipients.Recipient;
+import org.thoughtcrime.securesms.util.Base64;
 import org.thoughtcrime.securesms.util.ExpirationUtil;
 import org.thoughtcrime.securesms.util.GroupUtil;
+import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
+import org.whispersystems.signalservice.api.util.UuidUtil;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * The base class for message record models that are displayed in
@@ -96,10 +112,27 @@ public abstract class MessageRecord extends DisplayRecord {
 
   @Override
   public SpannableString getDisplayBody(@NonNull Context context) {
-    if (isGroupUpdate() && isOutgoing()) {
+    if (isGroupUpdate() && isGroupV2()) {
+      //TODO: GV2 update strings AND-198
+
+      try {
+        byte[] decoded = Base64.decode(getBody());
+        DecryptedGroupV2Context decryptedGroupV2Context = DecryptedGroupV2Context.parseFrom(decoded);
+        if (decryptedGroupV2Context.hasChange()) {
+          DecryptedGroupChange change = decryptedGroupV2Context.getChange();
+
+          return new SpannableString(formatGv2Change(context, change));
+        } else {
+          return new SpannableString(formatNewGv2Group(context, decryptedGroupV2Context.getGroupState()));
+        }
+      } catch (IOException e) {
+        //return new SpannableString("TODO: A GV2 was updated " + getBody());
+        throw new AlanException();
+      }
+    } else if (isGroupUpdate() && isOutgoing()) {
       return new SpannableString(context.getString(R.string.MessageRecord_you_updated_group));
     } else if (isGroupUpdate()) {
-      return new SpannableString(GroupUtil.getDescription(context, getBody()).toString(getIndividualRecipient()));
+      return new SpannableString(GroupUtil.getDescription(context, getBody(), false).toString(getIndividualRecipient()));
     } else if (isGroupQuit() && isOutgoing()) {
       return new SpannableString(context.getString(R.string.MessageRecord_left_group));
     } else if (isGroupQuit()) {
@@ -132,6 +165,88 @@ public abstract class MessageRecord extends DisplayRecord {
     }
 
     return new SpannableString(getBody());
+  }
+
+  /**
+   * TODO: GV2 Update this desc.
+   * Typically this can happen only at invite time. Or new groups you create.
+   */
+  private CharSequence formatNewGv2Group(@NonNull Context context, @NonNull DecryptedGroup group) {
+    UUID self = Recipient.self().getUuid().get();
+
+    if (DecryptedGroupUtil.findMemberByUuid(group.getMembersList(), self).isPresent()) {
+      return context.getString(R.string.MessageRecord_s_added_you, "TODO"); //TODO GV2 No info on who added you AND-227
+    }
+
+    Optional<DecryptedPendingMember> selfPending = DecryptedGroupUtil.findPendingByUuid(group.getPendingMembersList(), Recipient.self().getUuid().get());
+
+    if (selfPending.isPresent()) {
+      return context.getString(R.string.MessageRecord_s_invited_you_to_the_group, formatWho(context, selfPending.get().getAddedByUuid()));
+    }
+
+    //TODO: GV2 FALLBACK PLAN needed AND-198
+    return "NEW GROUP, but no further details";
+  }
+
+  private String formatWho(Context context, ByteString uuidBytes) {
+    UUID uuid = UuidUtil.fromByteString(uuidBytes);
+
+    return formatWho(context, uuid);
+  }
+
+  private String formatWho(Context context, UUID uuid) {
+    return DatabaseFactory.getRecipientDatabase(context)
+                          .getByUuid(uuid)
+                          .transform(Recipient::resolved)
+                          .transform(recipient -> {
+                            if (recipient.equals(Recipient.self())) {
+                              return "you!";
+                            } else {
+                              return recipient.toShortString(context);
+                            }
+                          })
+                          .or(() -> getIndividualRecipient().toShortString(context));
+  }
+
+  /**
+   * Describes a UUID by it's corresponding recipient's {@link Recipient#toShortString}.
+   */
+  private static class ShortStringDescriptionStrategy implements GroupsV2UpdateMessageProducer.DescribeMemberStrategy {
+
+    private final Context           context;
+    private final RecipientDatabase recipientDatabase;
+
+   ShortStringDescriptionStrategy(@NonNull Context context) {
+      this.context           = context;
+      this.recipientDatabase = DatabaseFactory.getRecipientDatabase(context);
+   }
+
+   @NonNull
+   @Override
+   public String describe(@NonNull UUID uuid) {
+     return recipientDatabase.getByUuid(uuid)
+                             .transform(rc -> Recipient.resolved(rc).toShortString(context))
+                             .or(context.getString(R.string.MessageRecord_unknown));
+   }
+ }
+
+  //TODO: GV2 I18N AND-198 AND-222
+  private CharSequence formatGv2Change(Context context, DecryptedGroupChange change) {
+    List<String> strings = new GroupsV2UpdateMessageProducer(context, new ShortStringDescriptionStrategy(context), Recipient.self().getUuid().get())
+                             .describeChange(change);
+
+    StringBuilder sb = new StringBuilder();
+
+    if (GV2DebugFlags.EXTRA_VISUAL_LOGGING_AND199) {
+      sb.append(String.format("GV2 revision " + change.getVersion() + "%n"));
+    }
+
+    for (int i = 0; i < strings.size(); i++) {
+      if (i > 0) sb.append('\n');
+      sb.append(strings.get(i));
+    }
+
+    return sb;
   }
 
   public long getId() {
