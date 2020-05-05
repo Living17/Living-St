@@ -514,7 +514,7 @@ public final class GroupDatabase extends Database {
     List<GroupId.V2> result = new LinkedList<>();
 
     try (Cursor cursor = databaseHelper.getReadableDatabase().query(TABLE_NAME, new String[]{ GROUP_ID }, null, null, null, null, null)) {
-      if (cursor.moveToNext()) {
+      while (cursor.moveToNext()) {
         GroupId groupId = GroupId.parseOrThrow(cursor.getString(cursor.getColumnIndexOrThrow(GROUP_ID)));
         if (groupId.isV2()) {
           result.add(groupId.requireV2());
