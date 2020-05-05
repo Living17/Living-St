@@ -83,6 +83,10 @@ public class EmojiPageView extends FrameLayout implements VariationSelectorListe
     }
   }
 
+  public void setRecyclerNestedScrollingEnabled(boolean enabled) {
+    recyclerView.setNestedScrollingEnabled(enabled);
+  }
+
   private static class ScrollDisabler implements RecyclerView.OnItemTouchListener {
     @Override
     public boolean onInterceptTouchEvent(@NonNull RecyclerView recyclerView, @NonNull MotionEvent motionEvent) {
