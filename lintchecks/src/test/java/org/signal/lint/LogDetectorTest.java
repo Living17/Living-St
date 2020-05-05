@@ -25,10 +25,10 @@ public final class LogDetectorTest {
                 "    Log.d(\"TAG\", \"msg\");\n" +
                 "    ~~~~~~~~~~~~~~~~~~~\n" +
                 "1 errors, 0 warnings")
-      .expectFixDiffs("Fix for src/foo/Example.java line 5: Replace with org.whispersystems.libsignal.logging.Log.d(\"TAG\", \"msg\"):\n" +
+      .expectFixDiffs("Fix for src/foo/Example.java line 5: Replace with org.thoughtcrime.securesms.logging.Log.d(\"TAG\", \"msg\"):\n" +
                         "@@ -5 +5\n" +
                         "-     Log.d(\"TAG\", \"msg\");\n" +
-                        "+     org.whispersystems.libsignal.logging.Log.d(\"TAG\", \"msg\");");
+                        "+     org.thoughtcrime.securesms.logging.Log.d(\"TAG\", \"msg\");");
   }
 
   @Test
@@ -49,9 +49,9 @@ public final class LogDetectorTest {
                 "    Log.w(\"TAG\", \"msg\", new Exception());\n" +
                 "    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" +
                 "1 errors, 0 warnings")
-      .expectFixDiffs("Fix for src/foo/Example.java line 5: Replace with org.whispersystems.libsignal.logging.Log.w(\"TAG\", \"msg\", new Exception()):\n" +
+      .expectFixDiffs("Fix for src/foo/Example.java line 5: Replace with org.thoughtcrime.securesms.logging.Log.w(\"TAG\", \"msg\", new Exception()):\n" +
                         "@@ -5 +5\n" +
                         "-     Log.w(\"TAG\", \"msg\", new Exception());\n" +
-                        "+     org.whispersystems.libsignal.logging.Log.w(\"TAG\", \"msg\", new Exception());");
+                        "+     org.thoughtcrime.securesms.logging.Log.w(\"TAG\", \"msg\", new Exception());");
   }
 }

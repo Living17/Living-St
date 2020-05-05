@@ -49,7 +49,7 @@ public final class SignalLogDetector extends Detector implements Detector.UastSc
     String            methodName = logCall.getMethodName();
     UExpression       tag        = arguments.get(0);
 
-    String fixSource = "org.whispersystems.libsignal.logging.Log.";
+    String fixSource = "org.thoughtcrime.securesms.logging.Log.";
 
     switch (arguments.size()) {
       case 2:
