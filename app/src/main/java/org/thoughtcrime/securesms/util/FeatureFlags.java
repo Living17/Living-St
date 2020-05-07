@@ -60,6 +60,7 @@ public final class FeatureFlags {
   private static final String CALLING_PIP                = "android.callingPip";
   private static final String NEW_GROUP_UI               = "android.newGroupUI";
   private static final String REACT_WITH_ANY_EMOJI       = "android.reactWithAnyEmoji";
+  private static final String GROUPS_V2                  = "android.groupsv2";
 
   /**
    * We will only store remote values for flags in this set. If you want a flag to be controllable
@@ -89,6 +90,10 @@ public final class FeatureFlags {
    */
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   private static final Map<String, Object> FORCED_VALUES = new HashMap<String, Object>() {{
+    put(UUIDS, true);
+    put(MESSAGE_REQUESTS, true);
+    put(NEW_GROUP_UI, true);
+    put(GROUPS_V2, true);
   }};
 
   /**
@@ -109,7 +114,8 @@ public final class FeatureFlags {
    */
   private static final Set<String> STICKY = Sets.newHashSet(
       PINS_FOR_ALL_LEGACY,
-      PINS_FOR_ALL
+      PINS_FOR_ALL,
+      GROUPS_V2
   );
 
   /**
@@ -253,6 +259,11 @@ public final class FeatureFlags {
   /** React with Any Emoji */
   public static boolean reactWithAnyEmoji() {
     return getBoolean(REACT_WITH_ANY_EMOJI, false);
+  }
+
+  /** Groups v2 send and receive. */
+  public static boolean groupsV2() {
+    return org.whispersystems.signalservice.FeatureFlags.ZK_GROUPS && getBoolean(GROUPS_V2, false);
   }
 
   /** Only for rendering debug info. */
@@ -492,4 +503,7 @@ public final class FeatureFlags {
 
   /** Read and write versioned profile information. */
   public static final boolean VERSIONED_PROFILES = org.whispersystems.signalservice.FeatureFlags.VERSIONED_PROFILES;
+
+  /** Can create a new V2 Group */
+  public static final boolean CREATE_V2_GROUPS = VERSIONED_PROFILES && uuids() && true;
 }

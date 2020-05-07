@@ -10,6 +10,8 @@ import com.annimon.stream.Collectors;
 import com.annimon.stream.Stream;
 import com.google.protobuf.ByteString;
 
+import org.GV2DebugFlags;
+import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
 import org.thoughtcrime.securesms.ApplicationContext;
 import org.thoughtcrime.securesms.attachments.Attachment;
 import org.thoughtcrime.securesms.crypto.UnidentifiedAccessUtil;
@@ -20,6 +22,7 @@ import org.thoughtcrime.securesms.database.MmsDatabase;
 import org.thoughtcrime.securesms.database.NoSuchMessageException;
 import org.thoughtcrime.securesms.database.documents.IdentityKeyMismatch;
 import org.thoughtcrime.securesms.database.documents.NetworkFailure;
+import org.thoughtcrime.securesms.database.model.databaseprotos.DecryptedGroupV2Context;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.groups.GroupId;
 import org.thoughtcrime.securesms.jobmanager.Data;
@@ -36,6 +39,7 @@ import org.thoughtcrime.securesms.recipients.RecipientId;
 import org.thoughtcrime.securesms.recipients.RecipientUtil;
 import org.thoughtcrime.securesms.transport.RetryLaterException;
 import org.thoughtcrime.securesms.transport.UndeliverableMessageException;
+import org.thoughtcrime.securesms.util.Base64;
 import org.thoughtcrime.securesms.util.GroupUtil;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceMessageSender;
@@ -337,17 +341,48 @@ public class PushGroupSendJob extends PushSendJob {
   }
 
   private @NonNull List<RecipientId> getGroupMessageV2Recipients(@NonNull OutgoingGroupUpdateMessage message) {
+    // TODO GV2 REVERT to V1 method - DO NOT store the whole group state
+    //  Ah, wait, OutgoingGroupMediaMessage seems to be ONLY for updates, this might not be too bad
     UUID                                  selfUUId          = Recipient.self().getUuid().get();
+    RecipientId selfId = Recipient.self().getId();
     MessageGroupContext.GroupV2Properties groupV2Properties = message.requireGroupV2Properties();
     boolean                               includePending    = groupV2Properties.isUpdate();
 
-    return Stream.concat(Stream.of(groupV2Properties.getActiveMembers()),
-                         includePending ? Stream.of(groupV2Properties.getPendingMembers()) : Stream.empty())
-                 .filterNot(selfUUId::equals)
-                 .distinct()
-                 .map(uuid -> Recipient.externalPush(context, uuid, null))
-                 .map(Recipient::getId)
-                 .toList();
+    DecryptedGroupChange decryptedGroupChange = null;
+    List<Recipient> deleted = Collections.emptyList();
+    try {
+         byte[] decoded = Base64.decode(message.getBody());
+        DecryptedGroupV2Context decryptedGroupV2Context = DecryptedGroupV2Context.parseFrom(decoded);
+        if (decryptedGroupV2Context.hasChange()) {
+      decryptedGroupChange = decryptedGroupV2Context.getChange();
+
+    List<ByteString> deleteMembersList = decryptedGroupChange.getDeleteMembersList();
+    deleted = Stream.of(deleteMembersList).map(uuid -> Recipient.externalPush(context, UuidUtil.fromByteString(uuid), null)).toList();
+
+    if (GV2DebugFlags.EXTRA_LOGGING_AND199) {
+      String collect = Stream.of(deleted).collect(StringBuilder::new, (sb, recipient) -> sb.append(Recipient.resolved(recipient.getId()).toShortString(context)).append(", ")).toString();
+      Log.d("ALAN", String.format("Deleted members (%d): %s", deleted.size(), collect));
+    }
+        }
+    } catch (IOException e) {
+      Log.w(TAG, "Failed to get deleted members", e);
+    }
+
+    List<RecipientId> recipientIds = Stream.concat(Stream.of(deleted),
+    Stream.concat(Stream.of(groupV2Properties.getActiveMembers()),
+      includePending ? Stream.of(groupV2Properties.getPendingMembers()) : Stream.empty())
+                              .map(uuid -> Recipient.externalPush(context, uuid, null)))
+                              .map(Recipient::getId)
+                              .filterNot(selfId::equals)
+                              .distinct()
+                              .toList();
+
+    if (GV2DebugFlags.EXTRA_LOGGING_AND199) {
+      String collect = Stream.of(recipientIds).collect(StringBuilder::new, (sb, recipientId) -> sb.append(Recipient.resolved(recipientId).toShortString(context)).append(", ")).toString();
+      Log.d("ALAN", String.format("Sending updates to (%d): %s", recipientIds.size(), collect));
+    }
+
+    return recipientIds;
   }
 
   public static class Factory implements Job.Factory<PushGroupSendJob> {

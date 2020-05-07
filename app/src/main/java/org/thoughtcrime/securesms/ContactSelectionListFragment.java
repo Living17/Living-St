@@ -90,6 +90,7 @@ public final class ContactSelectionListFragment extends    Fragment
 
   public static final String DISPLAY_MODE = "display_mode";
   public static final String MULTI_SELECT = "multi_select";
+  public static final String REQUIRE_UUID = "require_uuid";
   public static final String REFRESHABLE  = "refreshable";
   public static final String RECENTS      = "recents";
 
@@ -193,6 +194,10 @@ public final class ContactSelectionListFragment extends    Fragment
 
   private boolean isMulti() {
     return requireActivity().getIntent().getBooleanExtra(MULTI_SELECT, false);
+  }
+
+  private boolean isRequireUuid() {
+    return requireActivity().getIntent().getBooleanExtra(REQUIRE_UUID, false);
   }
 
   private void initializeCursor() {
@@ -388,15 +393,38 @@ public final class ContactSelectionListFragment extends    Fragment
               new AlertDialog.Builder(requireContext())
                              .setTitle(R.string.ContactSelectionListFragment_username_not_found)
                              .setMessage(getString(R.string.ContactSelectionListFragment_s_is_not_a_signal_user, contact.getNumber()))
-                             .setPositiveButton(R.string.ContactSelectionListFragment_okay, (dialog, which) -> dialog.dismiss())
+                             .setPositiveButton(android.R.string.ok, (dialog, which) -> dialog.dismiss())
                              .show();
             }
           });
         } else {
-          markContactSelected(selectedContact, contact);
+          if (isRequireUuid()) {
+            AlertDialog loadingDialog = SimpleProgressDialog.show(requireContext());
 
-          if (onContactSelectedListener != null) {
-            onContactSelectedListener.onContactSelected(contact.getRecipientId(), contact.getNumber());
+            SimpleTask.run(getViewLifecycleOwner().getLifecycle(),
+              () -> contact.getRecipient().get().getUuid(),
+              uuid -> {
+                loadingDialog.dismiss();
+                if (uuid.isPresent()) {
+                  markContactSelected(selectedContact, contact);
+
+                  if (onContactSelectedListener != null) {
+                    onContactSelectedListener.onContactSelected(contact.getRecipientId(), null);
+                  }
+                } else {
+                  new AlertDialog.Builder(requireContext())
+                                 .setTitle(R.string.ContactSelectionListFragment_user_does_not_have_a_uuid)
+                                 .setMessage(getString(R.string.ContactSelectionListFragment_you_do_not_know_the_uuid_for_s, contact.getNumber()))
+                                 .setPositiveButton(android.R.string.ok, (dialog, which) -> dialog.dismiss())
+                                 .show();
+                }
+              });
+          } else {
+            markContactSelected(selectedContact, contact);
+
+            if (onContactSelectedListener != null) {
+              onContactSelectedListener.onContactSelected(contact.getRecipientId(), contact.getNumber());
+            }
           }
         }
       } else {

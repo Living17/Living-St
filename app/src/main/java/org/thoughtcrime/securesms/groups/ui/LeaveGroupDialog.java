@@ -51,7 +51,7 @@ public final class LeaveGroupDialog {
                           if (success) {
                             if (onSuccess != null) onSuccess.run();
                           } else {
-                            Toast.makeText(context, R.string.ConversationActivity_error_leaving_group, Toast.LENGTH_LONG).show();
+                            Toast.makeText(context, GroupErrors.getUserDisplayMessage(GroupChangeFailureReason.OTHER), Toast.LENGTH_LONG).show();
                           }
                         }))
                    .setNegativeButton(R.string.no, null)

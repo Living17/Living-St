@@ -810,6 +810,12 @@ public class Recipient {
     return id.equals(recipient.id);
   }
 
+  public boolean isGv2Capable() {
+    return uuid               != null                 &&
+           uuidCapability     == Capability.SUPPORTED &&
+           groupsV2Capability == Capability.SUPPORTED;
+  }
+
   public enum Capability {
     UNKNOWN(0),
     SUPPORTED(1),
