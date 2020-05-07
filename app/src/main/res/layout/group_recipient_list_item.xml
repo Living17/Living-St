@@ -25,7 +25,7 @@
         android:layout_marginEnd="8dp"
         android:gravity="start|center_vertical"
         android:textAlignment="viewStart"
-        android:textAppearance="@style/TextAppearance.Signal.Body2"
+        android:textAppearance="@style/TextAppearance.Signal.Body1"
         app:layout_constraintBottom_toBottomOf="@+id/recipient_avatar"
         app:layout_constraintEnd_toStartOf="@+id/admin"
         app:layout_constraintHorizontal_bias="0"

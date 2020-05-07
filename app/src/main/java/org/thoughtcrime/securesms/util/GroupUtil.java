@@ -14,6 +14,7 @@ import org.thoughtcrime.securesms.database.GroupDatabase;
 import org.thoughtcrime.securesms.groups.BadGroupIdException;
 import org.thoughtcrime.securesms.groups.GroupId;
 import org.thoughtcrime.securesms.logging.Log;
+import org.thoughtcrime.securesms.mms.MessageGroupContext;
 import org.thoughtcrime.securesms.mms.OutgoingGroupUpdateMessage;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientForeverObserver;
@@ -22,12 +23,9 @@ import org.whispersystems.signalservice.api.messages.SignalServiceDataMessage;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroup;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupContext;
 import org.whispersystems.signalservice.api.messages.SignalServiceGroupV2;
-import org.whispersystems.signalservice.api.push.SignalServiceAddress;
-import org.whispersystems.signalservice.api.util.UuidUtil;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 
 import static org.whispersystems.signalservice.internal.push.SignalServiceProtos.GroupContext;
@@ -95,13 +93,13 @@ public final class GroupUtil {
   }
 
 
-  public static @NonNull GroupDescription getDescription(@NonNull Context context, @Nullable String encodedGroup) {
+  public static @NonNull GroupDescription getDescription(@NonNull Context context, @Nullable String encodedGroup, boolean isV2) {
     if (encodedGroup == null) {
       return new GroupDescription(context, null);
     }
 
     try {
-      GroupContext  groupContext = GroupContext.parseFrom(Base64.decode(encodedGroup));
+      MessageGroupContext groupContext = new MessageGroupContext(encodedGroup, isV2);
       return new GroupDescription(context, groupContext);
     } catch (IOException e) {
       Log.w(TAG, e);
@@ -129,25 +127,19 @@ public final class GroupUtil {
 
   public static class GroupDescription {
 
-    @NonNull  private final Context         context;
-    @Nullable private final GroupContext    groupContext;
-    @Nullable private final List<Recipient> members;
+    @NonNull  private final Context             context;
+    @Nullable private final MessageGroupContext groupContext;
+    @Nullable private final List<Recipient>     members;
 
-    public GroupDescription(@NonNull Context context, @Nullable GroupContext groupContext) {
+    public GroupDescription(@NonNull Context context, @Nullable MessageGroupContext groupContext) {
       this.context      = context.getApplicationContext();
       this.groupContext = groupContext;
 
-      if (groupContext == null || groupContext.getMembersList().isEmpty()) {
+      if (groupContext == null) {
         this.members = null;
       } else {
-        this.members = new LinkedList<>();
-
-        for (GroupContext.Member member : groupContext.getMembersList()) {
-          Recipient recipient = Recipient.externalPush(context, new SignalServiceAddress(UuidUtil.parseOrNull(member.getUuid()), member.getE164()));
-          if (!recipient.isLocalNumber()) {
-            this.members.add(recipient);
-          }
-        }
+        List<Recipient> membersList = groupContext.getMembersList(context);
+        this.members = membersList.isEmpty() ? null : membersList;
       }
     }
 

@@ -1,19 +1,24 @@
 package org.thoughtcrime.securesms.mms;
 
+import android.content.Context;
+
 import androidx.annotation.NonNull;
 
-import com.annimon.stream.Stream;
-
+import org.signal.storageservice.protos.groups.local.DecryptedMember;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupMasterKey;
-import org.signal.zkgroup.util.UUIDUtil;
+import org.thoughtcrime.securesms.database.model.databaseprotos.DecryptedGroupV2Context;
+import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.util.Base64;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos.GroupContext;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos.GroupContextV2;
-import org.thoughtcrime.securesms.database.model.databaseprotos.DecryptedGroupV2Context;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
@@ -71,6 +76,39 @@ public final class MessageGroupContext {
 
   public @NonNull String getEncodedGroupContext() {
     return encodedGroupContext;
+  }
+
+  public String getName() {
+    return isV2Group() ? groupV2.decryptedGroupV2Context.getGroupState().getTitle()
+                       : groupV1.getGroupContext().getName();
+  }
+
+  public List<Recipient> getMembersList(@NonNull Context context) {
+    if (isV2Group()) {
+      List<Recipient> members = new LinkedList<>();
+      for (DecryptedMember member : groupV2.decryptedGroupV2Context.getGroupState().getMembersList()) {
+        Recipient recipient = Recipient.externalPush(context, UuidUtil.fromByteString(member.getUuid()), null);
+        if (!recipient.isLocalNumber()) {
+          members.add(recipient);
+        }
+      }
+      return members;
+    } else {
+      List<GroupContext.Member> membersList = groupV1.groupContext.getMembersList();
+      if (membersList.isEmpty()) {
+        return Collections.emptyList();
+      } else {
+        LinkedList<Recipient> members = new LinkedList<>();
+
+        for (GroupContext.Member member : membersList) {
+          Recipient recipient = Recipient.externalPush(context, new SignalServiceAddress(UuidUtil.parseOrNull(member.getUuid()), member.getE164()));
+          if (!recipient.isLocalNumber()) {
+            members.add(recipient);
+          }
+        }
+        return members;
+      }
+    }
   }
 
   public static class GroupV1Properties {

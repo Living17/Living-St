@@ -28,6 +28,9 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 public class RecipientUtil {
 
@@ -219,5 +222,15 @@ public class RecipientUtil {
   private static boolean isProfileSharedViaGroup(@NonNull Context context, @NonNull Recipient recipient) {
     return Stream.of(DatabaseFactory.getGroupDatabase(context).getPushGroupsContainingMember(recipient.getId()))
                  .anyMatch(group -> Recipient.resolved(group.getRecipientId()).isProfileSharing());
+  }
+
+  public static List<RecipientId> toRecipientIdList(@NonNull Collection<Recipient> recipients) {
+    final List<RecipientId> recipientIds = new ArrayList<>(recipients.size());
+
+    for (Recipient recipient : recipients) {
+      recipientIds.add(recipient.getId());
+    }
+
+    return recipientIds;
   }
 }

@@ -2116,7 +2116,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
       return;
     }
 
-    if (recipient.isPushGroup() && !recipient.isProfileSharing()) {
+    if (recipient.isPushGroup() && !recipient.isProfileSharing() && !recipient.isPushV2Group()) {
       groupShareProfileView.get().setRecipient(recipient);
       groupShareProfileView.get().setVisibility(View.VISIBLE);
     } else if (groupShareProfileView.resolved()) {
