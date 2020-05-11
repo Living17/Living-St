@@ -48,6 +48,10 @@ class ConversationRepository {
       lastSeenPosition = DatabaseFactory.getMmsSmsDatabase(context).getMessagePositionForLastSeen(threadId, lastSeen);
     }
 
+    if (lastSeenPosition <= 0) {
+      lastSeen = 0;
+    }
+
     return new ConversationData(lastSeen, lastSeenPosition, hasSent, isMessageRequestAccepted, hasPreMessageRequestMessages, jumpToPosition);
   }
 }
