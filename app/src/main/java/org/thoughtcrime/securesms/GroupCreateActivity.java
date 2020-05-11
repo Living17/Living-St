@@ -56,6 +56,8 @@ import org.thoughtcrime.securesms.database.GroupDatabase;
 import org.thoughtcrime.securesms.database.GroupDatabase.GroupRecord;
 import org.thoughtcrime.securesms.database.RecipientDatabase;
 import org.thoughtcrime.securesms.database.ThreadDatabase;
+import org.thoughtcrime.securesms.groups.GroupChangeBusyException;
+import org.thoughtcrime.securesms.groups.GroupChangeFailedException;
 import org.thoughtcrime.securesms.groups.GroupId;
 import org.thoughtcrime.securesms.groups.GroupManager;
 import org.thoughtcrime.securesms.groups.GroupManager.GroupActionResult;
@@ -442,7 +444,12 @@ public class GroupCreateActivity extends PassphraseRequiredActionBarActivity
 
     @Override
     protected Optional<GroupActionResult> doInBackground(Void... aVoid) {
-      return Optional.of(GroupManager.createGroupV1(activity, members, BitmapUtil.toByteArray(avatar), name, false));
+      try {
+        // TODO: GV2 revert when there is another way to create GV2
+        return Optional.of(GroupManager.createGroup(activity, members, BitmapUtil.toByteArray(avatar), name, false));
+      } catch (GroupChangeBusyException | GroupChangeFailedException | IOException e) {
+        return Optional.absent();
+      }
     }
 
     @Override

@@ -30,6 +30,7 @@ import com.annimon.stream.Collectors;
 import com.annimon.stream.Stream;
 import com.google.android.mms.pdu_alt.NotificationInd;
 import com.google.android.mms.pdu_alt.PduHeaders;
+import com.google.protobuf.ByteString;
 
 import net.sqlcipher.database.SQLiteDatabase;
 
@@ -72,6 +73,7 @@ import org.thoughtcrime.securesms.util.JsonUtils;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
 import org.thoughtcrime.securesms.util.Util;
 import org.whispersystems.libsignal.util.guava.Optional;
+import org.whispersystems.signalservice.api.util.UuidUtil;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -1137,7 +1139,11 @@ public class MmsDatabase extends MessagingDatabase {
         MessageGroupContext.GroupV2Properties groupV2Properties = outgoingGroupUpdateMessage.requireGroupV2Properties();
         members.addAll(Stream.of(groupV2Properties.getActiveMembers()).map(recipientDatabase::getOrInsertFromUuid).toList());
         if (groupV2Properties.isUpdate()) {
-          members.addAll(Stream.of(groupV2Properties.getPendingMembers()).map(recipientDatabase::getOrInsertFromUuid).toList());
+          members.addAll(Stream.concat(Stream.of(groupV2Properties.getPendingMembers()),
+                                       Stream.of(groupV2Properties.getRemovedMembers()))
+                               .distinct()
+                               .map(recipientDatabase::getOrInsertFromUuid)
+                               .toList());
         }
         members.remove(Recipient.self().getId());
       } else {

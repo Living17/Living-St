@@ -1,19 +1,25 @@
 package org.thoughtcrime.securesms.mms;
 
+import android.content.Context;
+
 import androidx.annotation.NonNull;
 
-import com.annimon.stream.Stream;
-
+import org.signal.storageservice.protos.groups.local.DecryptedMember;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupMasterKey;
-import org.signal.zkgroup.util.UUIDUtil;
+import org.thoughtcrime.securesms.database.model.databaseprotos.DecryptedGroupV2Context;
+import org.thoughtcrime.securesms.recipients.Recipient;
+import org.thoughtcrime.securesms.recipients.RecipientId;
 import org.thoughtcrime.securesms.util.Base64;
 import org.whispersystems.signalservice.api.groupsv2.DecryptedGroupUtil;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
+import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos.GroupContext;
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos.GroupContextV2;
-import org.thoughtcrime.securesms.database.model.databaseprotos.DecryptedGroupV2Context;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
@@ -50,7 +56,7 @@ public final class MessageGroupContext {
     this.groupV1             = null;
     this.groupV2             = new GroupV2Properties(group);
   }
-  
+
   public @NonNull GroupV1Properties requireGroupV1Properties() {
     if (groupV1 == null) {
       throw new AssertionError();
@@ -71,6 +77,39 @@ public final class MessageGroupContext {
 
   public @NonNull String getEncodedGroupContext() {
     return encodedGroupContext;
+  }
+
+  public String getName() {
+    return isV2Group() ? groupV2.decryptedGroupV2Context.getGroupState().getTitle()
+                       : groupV1.getGroupContext().getName();
+  }
+
+  public List<RecipientId> getMembersList() {
+    if (isV2Group()) {
+      List<RecipientId> members = new LinkedList<>();
+      for (DecryptedMember member : groupV2.decryptedGroupV2Context.getGroupState().getMembersList()) {
+        RecipientId recipient = RecipientId.from(UuidUtil.fromByteString(member.getUuid()), null);
+        if (!Recipient.self().getId().equals(recipient)) {
+          members.add(recipient);
+        }
+      }
+      return members;
+    } else {
+      List<GroupContext.Member> membersList = groupV1.groupContext.getMembersList();
+      if (membersList.isEmpty()) {
+        return Collections.emptyList();
+      } else {
+        LinkedList<RecipientId> members = new LinkedList<>();
+
+        for (GroupContext.Member member : membersList) {
+          RecipientId recipient = RecipientId.from(UuidUtil.parseOrNull(member.getUuid()), member.getE164());
+          if (!Recipient.self().getId().equals(recipient)) {
+            members.add(recipient);
+          }
+        }
+        return members;
+      }
+    }
   }
 
   public static class GroupV1Properties {
@@ -124,6 +163,10 @@ public final class MessageGroupContext {
 
     public @NonNull List<UUID> getPendingMembers() {
       return DecryptedGroupUtil.pendingToUuidList(decryptedGroupV2Context.getGroupState().getPendingMembersList());
+    }
+
+    public @NonNull List<UUID> getRemovedMembers() {
+      return DecryptedGroupUtil.removedMembersUuidList(decryptedGroupV2Context.getChange());
     }
 
     public boolean isUpdate() {

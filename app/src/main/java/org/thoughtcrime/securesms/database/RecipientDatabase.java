@@ -240,6 +240,7 @@ public class RecipientDatabase extends Database {
   }
 
   public enum GroupType {
+    //TODO: GV2 - NEED SIGNAL_V2? Or rename to PUSH
     NONE(0), MMS(1), SIGNAL_V1(2);
 
     private final int id;

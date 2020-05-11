@@ -2,6 +2,7 @@ package org.thoughtcrime.securesms.jobs;
 
 import androidx.annotation.NonNull;
 
+import org.GV2DebugFlags;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.thoughtcrime.securesms.crypto.ProfileKeyUtil;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
@@ -11,6 +12,7 @@ import org.thoughtcrime.securesms.groups.GroupId;
 import org.thoughtcrime.securesms.jobmanager.Data;
 import org.thoughtcrime.securesms.jobmanager.Job;
 import org.thoughtcrime.securesms.jobmanager.impl.NetworkConstraint;
+import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.profiles.AvatarHelper;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.util.FeatureFlags;
@@ -18,6 +20,7 @@ import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.push.exceptions.PushNetworkException;
 import org.whispersystems.signalservice.api.util.StreamDetails;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class RotateProfileKeyJob extends BaseJob {
@@ -54,7 +57,14 @@ public class RotateProfileKeyJob extends BaseJob {
     ProfileKey                  profileKey        = ProfileKeyUtil.createNew();
     Recipient                   self              = Recipient.self();
 
+if(GV2DebugFlags.DO_NOT_CHANGE_PROFILE_KEY_ON_ROTATE){
+  profileKey = ProfileKeyUtil.getSelfProfileKey();
+}
+
     recipientDatabase.setProfileKey(self.getId(), profileKey);
+
+ //TODO: GV2 remove AND-199
+    Log.d("ProfileKeySet", "New profKey " + Arrays.toString(profileKey.serialize()));
 
      try (StreamDetails avatarStream = AvatarHelper.getSelfProfileAvatarStream(context)) {
       if (FeatureFlags.VERSIONED_PROFILES) {

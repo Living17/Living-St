@@ -6,6 +6,7 @@ import androidx.annotation.NonNull;
 
 import com.google.protobuf.ByteString;
 
+import org.GV2DebugFlags;
 import org.signal.storageservice.protos.groups.AccessControl;
 import org.signal.storageservice.protos.groups.Member;
 import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
@@ -15,7 +16,9 @@ import org.signal.storageservice.protos.groups.local.DecryptedPendingMember;
 import org.signal.storageservice.protos.groups.local.DecryptedPendingMemberRemoval;
 import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.groups.GV2AccessLevelUtil;
+import org.thoughtcrime.securesms.logging.Log;
 import org.thoughtcrime.securesms.util.ExpirationUtil;
+import org.thoughtcrime.securesms.util.Hex;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
 import java.util.LinkedList;
@@ -55,8 +58,18 @@ final class GroupsV2UpdateMessageProducer {
     describeNewAttributeAccess(change, updates);
     describeNewMembershipAccess(change, updates);
 
-    if (updates.isEmpty()) {
+    if (updates.isEmpty()) { //TODO: GV2 consider: && change.getModifiedProfileKeysCount() == 0) {
       describeUnknownChange(change, updates);
+    }
+
+    if (GV2DebugFlags.EXTRA_LOGGING_AND199) {
+      for (DecryptedMember invitee : change.getModifiedProfileKeysList()) {
+        String str = String.format("%s modified the profile key of %s to %s", describe(change.getEditor()), describe(invitee.getUuid()), Hex.toStringCondensed(invitee.getProfileKey().toByteArray()));
+        if (GV2DebugFlags.EXTRA_VISUAL_LOGGING_AND199) {
+          updates.add(str);
+        }
+        Log.d("ALAN", "Profile key change: " + str);
+      }
     }
 
     return updates;
@@ -67,6 +80,10 @@ final class GroupsV2UpdateMessageProducer {
    */
   private void describeUnknownChange(@NonNull DecryptedGroupChange change, @NonNull List<String> updates) {
     boolean editorIsYou = change.getEditor().equals(youUuid);
+
+if(GV2DebugFlags.EXTRA_LOGGING_AND199){
+    Log.d("ALAN", "Change unknown " + change.toString());
+}
 
     if (editorIsYou) {
       updates.add(context.getString(R.string.MessageRecord_you_updated_group));
