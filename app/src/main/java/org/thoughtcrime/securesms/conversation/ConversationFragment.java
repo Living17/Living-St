@@ -537,6 +537,7 @@ public class ConversationFragment extends Fragment {
     if (this.threadId != threadId) {
       this.threadId = threadId;
       messageRequestViewModel.setConversationInfo(recipient.getId(), threadId);
+      conversationViewModel.onConversationDataAvailable(threadId, -1);
       initializeListAdapter();
     }
   }
