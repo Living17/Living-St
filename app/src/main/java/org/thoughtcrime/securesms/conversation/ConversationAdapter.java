@@ -242,8 +242,7 @@ public class ConversationAdapter<V extends View & BindableConversationItem>
   @Override
   public void submitList(@Nullable PagedList<MessageRecord> pagedList) {
     cleanFastRecords();
-    super.submitList(pagedList);
-    notifyDataSetChanged();
+    super.submitList(pagedList, this::notifyDataSetChanged);
   }
 
   @Override
@@ -378,7 +377,7 @@ public class ConversationAdapter<V extends View & BindableConversationItem>
    */
   @MainThread
   void addFastRecord(MessageRecord record) {
-    fastRecords.add(record);
+    fastRecords.add(0, record);
     notifyDataSetChanged();
   }
 
