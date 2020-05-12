@@ -153,6 +153,8 @@ import org.thoughtcrime.securesms.groups.GroupChangeFailedException;
 import org.thoughtcrime.securesms.groups.GroupInsufficientRightsException;
 import org.thoughtcrime.securesms.groups.GroupManager;
 import org.thoughtcrime.securesms.groups.GroupNotAMemberException;
+import org.thoughtcrime.securesms.groups.ui.GroupChangeFailureReason;
+import org.thoughtcrime.securesms.groups.ui.GroupErrors;
 import org.thoughtcrime.securesms.groups.ui.LeaveGroupDialog;
 import org.thoughtcrime.securesms.groups.ui.managegroup.ManageGroupActivity;
 import org.thoughtcrime.securesms.groups.ui.pendingmemberinvites.PendingMemberInvitesActivity;
@@ -2825,7 +2827,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
 
   @Override
   public void onMessageRequest(@NonNull MessageRequestViewModel viewModel) {
-    messageRequestBottomView.setAcceptOnClickListener(v -> viewModel.onAccept());
+    messageRequestBottomView.setAcceptOnClickListener(v -> viewModel.onAccept(this::showGroupChangeErrorToast));
     messageRequestBottomView.setDeleteOnClickListener(v -> onMessageRequestDeleteClicked(viewModel));
     messageRequestBottomView.setBlockOnClickListener(v -> onMessageRequestBlockClicked(viewModel));
     messageRequestBottomView.setUnblockOnClickListener(v -> onMessageRequestUnblockClicked(viewModel));
@@ -2842,6 +2844,10 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
           finish();
       }
     });
+  }
+
+  private void showGroupChangeErrorToast(@NonNull GroupChangeFailureReason e) {
+    Toast.makeText(this, GroupErrors.getUserDisplayMessage(e), Toast.LENGTH_LONG).show();
   }
 
   @Override
