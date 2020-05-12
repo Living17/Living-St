@@ -2192,6 +2192,10 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     return getRecipient() != null && getRecipient().isPushGroup();
   }
 
+  private boolean isPushGroupV1Conversation() {
+    return getRecipient() != null && getRecipient().isPushV1Group();
+  }
+
   private boolean isSmsForced() {
     return sendButton.isManualSelection() && sendButton.getSelectedTransport().isSms();
   }
@@ -3011,8 +3015,11 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   }
 
   private void presentMessageRequestDisplayState(@NonNull MessageRequestViewModel.DisplayState displayState) {
-    if (getIntent().hasExtra(TEXT_EXTRA) || getIntent().hasExtra(MEDIA_EXTRA) || getIntent().hasExtra(STICKER_EXTRA) || (isPushGroupConversation() && !isActiveGroup())) {
+    if (getIntent().hasExtra(TEXT_EXTRA) || getIntent().hasExtra(MEDIA_EXTRA) || getIntent().hasExtra(STICKER_EXTRA)) {
       Log.d(TAG, "[presentMessageRequestDisplayState] Have extra, so ignoring provided state.");
+      messageRequestBottomView.setVisibility(View.GONE);
+    } else if (isPushGroupV1Conversation() && !isActiveGroup()) {
+      Log.d(TAG, "[presentMessageRequestDisplayState] Inactive push group V1, so ignoring provided state.");
       messageRequestBottomView.setVisibility(View.GONE);
     } else {
       Log.d(TAG, "[presentMessageRequestDisplayState] " + displayState);
