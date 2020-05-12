@@ -162,4 +162,6 @@
     <dimen name="group_manage_fragment_card_vertical_padding">12dp</dimen>
     <dimen name="group_manage_fragment_row_height">52dp</dimen>
     <dimen name="group_manage_fragment_row_horizontal_padding">16dp</dimen>
+
+    <dimen name="wave_form_bar_width">2dp</dimen>
 </resources>

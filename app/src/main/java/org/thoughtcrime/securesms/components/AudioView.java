@@ -29,6 +29,7 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.audio.AudioSlidePlayer;
+import org.thoughtcrime.securesms.audio.AudioWaveForm;
 import org.thoughtcrime.securesms.database.AttachmentDatabase;
 import org.thoughtcrime.securesms.events.PartProgressEvent;
 import org.thoughtcrime.securesms.logging.Log;
@@ -141,6 +142,17 @@ public final class AudioView extends FrameLayout implements AudioSlidePlayer.Lis
     }
 
     this.audioSlidePlayer = AudioSlidePlayer.createFor(getContext(), audio, this);
+
+    if (seekBar instanceof WaveFormSeekBarView) {
+      WaveFormSeekBarView waveFormView = (WaveFormSeekBarView) seekBar;
+      if (android.os.Build.VERSION.SDK_INT >= 23) {
+        new AudioWaveForm(audio, getContext()).generateWaveForm(36,
+                                                                waveFormView::setWaveData,
+                                                                e -> waveFormView.setWaveMode(false));
+      } else {
+        waveFormView.setWaveMode(false);
+      }
+    }
   }
 
   public void cleanup() {
