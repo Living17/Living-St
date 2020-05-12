@@ -35,7 +35,7 @@ final class ReactWithAnyEmojiAdapter extends RecyclerView.Adapter<ReactWithAnyEm
 
   @Override
   public @NonNull ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-    return new ViewHolder(new EmojiPageView(parent.getContext(), emojiEventListener, variationSelectorListener));
+    return new ViewHolder(new EmojiPageView(parent.getContext(), emojiEventListener, variationSelectorListener, false));
   }
 
   @Override
