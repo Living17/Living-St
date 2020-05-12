@@ -58,6 +58,7 @@ public final class AudioView extends FrameLayout implements AudioSlidePlayer.Lis
            private final boolean             autoRewind;
 
   @Nullable private final TextView timestamp;
+  @Nullable private final TextView duration;
 
   @Nullable private SlideClickListener downloadListener;
   @Nullable private AudioSlidePlayer   audioSlidePlayer;
@@ -92,6 +93,7 @@ public final class AudioView extends FrameLayout implements AudioSlidePlayer.Lis
       this.circleProgress  = findViewById(R.id.circle_progress);
       this.seekBar         = findViewById(R.id.seek);
       this.timestamp       = findViewById(R.id.timestamp);
+      this.duration        = findViewById(R.id.duration);
 
       lottieDirection = REVERSE;
       this.playPauseButton.setOnClickListener(new PlayPauseClickedListener());
@@ -146,11 +148,21 @@ public final class AudioView extends FrameLayout implements AudioSlidePlayer.Lis
     if (seekBar instanceof WaveFormSeekBarView) {
       WaveFormSeekBarView waveFormView = (WaveFormSeekBarView) seekBar;
       if (android.os.Build.VERSION.SDK_INT >= 23) {
-        new AudioWaveForm(audio, getContext()).generateWaveForm(36,
-                                                                waveFormView::setWaveData,
-                                                                e -> waveFormView.setWaveMode(false));
+        new AudioWaveForm(audio, getContext()).generateWaveForm(
+          data -> {
+            waveFormView.setWaveData(data.getWaveForm());
+            if (duration != null) {
+              long durationSecs = data.getDuration(TimeUnit.SECONDS);
+              duration.setText(getContext().getResources().getString(R.string.AudioView_duration, durationSecs / 60, durationSecs % 60));
+              duration.setVisibility(VISIBLE);
+            }
+          },
+          e -> waveFormView.setWaveMode(false));
       } else {
         waveFormView.setWaveMode(false);
+        if (duration != null) {
+          duration.setVisibility(GONE);
+        }
       }
     }
   }

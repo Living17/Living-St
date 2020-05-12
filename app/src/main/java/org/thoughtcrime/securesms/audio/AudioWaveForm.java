@@ -24,10 +24,15 @@ import org.thoughtcrime.securesms.util.concurrent.SignalExecutors;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
+@RequiresApi(api = Build.VERSION_CODES.M)
 public final class AudioWaveForm {
 
   private static final String TAG = Log.tag(AudioWaveForm.class);
+
+  private static final int BARS            = 36;
+  private static final int SAMPLES_PER_BAR =  4;
 
   private final AudioSlide slide;
   private final Context    context;
@@ -37,31 +42,30 @@ public final class AudioWaveForm {
     this.context = context;
   }
 
-  private static final LruCache<Uri, float[]> WAVE_FORM_CACHE        = new LruCache<>(200);
-  private static final Executor               AUDIO_DECODER_EXECUTOR = SignalExecutors.BOUNDED;
+  private static final LruCache<Uri, AudioFileInfo> WAVE_FORM_CACHE        = new LruCache<>(200);
+  private static final Executor                     AUDIO_DECODER_EXECUTOR = SignalExecutors.BOUNDED;
 
   @AnyThread
-  @RequiresApi(api = Build.VERSION_CODES.M)
-  public void generateWaveForm(int bars, @NonNull Consumer<float[]> onSuccess, @NonNull Consumer<IOException> onFailure) {
+  public void generateWaveForm(@NonNull Consumer<AudioFileInfo> onSuccess, @NonNull Consumer<IOException> onFailure) {
     AUDIO_DECODER_EXECUTOR.execute(() -> {
       try {
         long startTime = System.currentTimeMillis();
         Uri uri = slide.getUri();
         if (uri == null) {
-          Util.runOnMain(() -> onSuccess.accept(new float[bars]));
+          Util.runOnMain(() -> onSuccess.accept(null));
           return;
         }
 
-        float[] floats = WAVE_FORM_CACHE.get(uri);
-        if (floats != null) {
-          Util.runOnMain(() -> onSuccess.accept(floats));
+        AudioFileInfo cached = WAVE_FORM_CACHE.get(uri);
+        if (cached != null) {
+          Util.runOnMain(() -> onSuccess.accept(cached));
           return;
         }
 
-        float[] blocks = generateWaveForm(uri, bars);
-        WAVE_FORM_CACHE.put(uri, blocks);
+        AudioFileInfo fileInfo = generateWaveForm(uri, BARS);
+        WAVE_FORM_CACHE.put(uri, fileInfo);
         Log.d("ALAN", "Form loadtime " + (System.currentTimeMillis() - startTime));
-        Util.runOnMain(() -> onSuccess.accept(blocks));
+        Util.runOnMain(() -> onSuccess.accept(fileInfo));
       } catch (IOException e) {
         Log.e(TAG, "", e);
         onFailure.accept(e);
@@ -71,13 +75,12 @@ public final class AudioWaveForm {
 
   @WorkerThread
   @RequiresApi(api = 23)
-  private float[] generateWaveForm(@NonNull Uri uri, int bars) throws IOException {
+  private AudioFileInfo generateWaveForm(@NonNull Uri uri, int bars) throws IOException {
     try (MediaInput dataSource = DecryptableUriMediaInput.createForUri(context, uri)) {
       long[] wave = new long[bars];
       int[] waveSamples = new int[bars];
-      int samplesPerBar = 4;
 
-      int[] inputSamples = new int[bars * samplesPerBar];
+      int[] inputSamples = new int[bars * SAMPLES_PER_BAR];
       MediaCodec codec;
       ByteBuffer[] codecInputBuffers;
       ByteBuffer[] codecOutputBuffers;
@@ -122,16 +125,16 @@ public final class AudioWaveForm {
               presentationTimeUs,
               sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);
             if (!sawInputEOS) {
-              int barIndex = (int) (samplesPerBar * (wave.length * extractor.getSampleTime()) / totalDurationUs);
+              int barIndex = (int) (SAMPLES_PER_BAR * (wave.length * extractor.getSampleTime()) / totalDurationUs);
               inputSamples[barIndex]++;
               sawInputEOS = !extractor.advance();
               if (inputSamples[barIndex] > 0) {
                 //advance to next bar
-                int nextBarIndex = (int) (samplesPerBar * (wave.length * extractor.getSampleTime()) / totalDurationUs);
+                int nextBarIndex = (int) (SAMPLES_PER_BAR * (wave.length * extractor.getSampleTime()) / totalDurationUs);
                 while (!sawInputEOS && nextBarIndex == barIndex) {
                   sawInputEOS = !extractor.advance();
                   if (!sawInputEOS) {
-                    nextBarIndex = (int) (samplesPerBar * (wave.length * extractor.getSampleTime()) / totalDurationUs);
+                    nextBarIndex = (int) (SAMPLES_PER_BAR * (wave.length * extractor.getSampleTime()) / totalDurationUs);
                   }
                 }
               }
@@ -184,7 +187,26 @@ public final class AudioWaveForm {
       for (int i = 0; i < bars; i++) {
         floats[i] /= max;
       }
-      return floats;
+      return new AudioFileInfo(totalDurationUs, floats);
+    }
+  }
+
+  public static class AudioFileInfo {
+
+    private final long    durationUs;
+    private final float[] waveForm;
+
+    private AudioFileInfo(long durationUs, float[] waveForm) {
+      this.durationUs = durationUs;
+      this.waveForm   = waveForm;
+    }
+
+    public long getDuration(@NonNull TimeUnit timeUnit) {
+      return timeUnit.convert(durationUs, TimeUnit.MICROSECONDS);
+    }
+
+    public float[] getWaveForm() {
+      return waveForm;
     }
   }
 }
