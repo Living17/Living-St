@@ -203,6 +203,10 @@ public class WebRtcCallView extends FrameLayout {
   }
 
   public void setLocalRenderer(@Nullable SurfaceViewRenderer surfaceViewRenderer) {
+    if (localRenderer == surfaceViewRenderer) {
+      return;
+    }
+
     localRenderer = surfaceViewRenderer;
 
     if (surfaceViewRenderer == null) {
@@ -258,6 +262,10 @@ public class WebRtcCallView extends FrameLayout {
 
   public void setCameraDirection(@NonNull CameraState.Direction cameraDirection) {
     this.cameraDirection = cameraDirection;
+
+    if (localRenderer != null) {
+      localRenderer.setMirror(cameraDirection == CameraState.Direction.FRONT);
+    }
   }
 
   public void setRecipient(@NonNull Recipient recipient) {
