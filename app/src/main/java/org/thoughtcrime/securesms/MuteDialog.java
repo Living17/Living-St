@@ -25,7 +25,7 @@ public class MuteDialog extends AlertDialog {
   }
 
   public static void show(final Context context, final @NonNull MuteSelectionListener listener) {
-    show(context, null);
+    show(context, listener, null);
   }
 
   public static void show(final Context context, final @NonNull MuteSelectionListener listener, @Nullable Runnable cancelListener) {
