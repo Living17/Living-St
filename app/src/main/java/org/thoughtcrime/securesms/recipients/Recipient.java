@@ -152,6 +152,9 @@ public class Recipient {
   @WorkerThread
   public static @NonNull Recipient externalPush(@NonNull Context context, @Nullable UUID uuid, @Nullable String e164) {
     if (UuidUtil.UNKNOWN_UUID.equals(uuid)) {
+      if (e164 == null) {
+        return Recipient.UNKNOWN;
+      }
       uuid = null;
     }
 

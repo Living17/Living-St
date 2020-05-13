@@ -9,6 +9,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.signal.zkgroup.profiles.ClientZkProfileOperations;
+import org.GV2DebugFlags;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.SessionBuilder;
 import org.whispersystems.libsignal.SignalProtocolAddress;
@@ -1072,10 +1073,18 @@ public class SignalServiceMessageSender {
   }
 
   private static GroupContextV2 createGroupContent(SignalServiceGroupV2 group) {
-    return GroupContextV2.newBuilder()
-                         .setMasterKey(ByteString.copyFrom(group.getMasterKey().serialize()))
-                         .setRevision(group.getRevision())
-                         .build();
+    GroupContextV2.Builder builder = GroupContextV2.newBuilder()
+                                                   .setMasterKey(ByteString.copyFrom(group.getMasterKey().serialize()))
+                                                   .setRevision(group.getRevision());
+
+    if (GV2DebugFlags.INCLUDE_SIGNED_GROUP_CHANGE) {
+      byte[] signedGroupChange = group.getSignedGroupChange();
+      if (signedGroupChange != null) {
+        builder.setGroupChange(ByteString.copyFrom(signedGroupChange));
+      }
+    }
+
+    return builder.build();
   }
 
   private List<DataMessage.Contact> createSharedContactContent(List<SharedContact> contacts) throws IOException {

@@ -11,7 +11,6 @@ import org.signal.storageservice.protos.groups.local.DecryptedGroupChange;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.signal.zkgroup.groups.GroupSecretParams;
-import org.signal.zkgroup.util.UUIDUtil;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.database.GroupDatabase;
 import org.thoughtcrime.securesms.database.MmsDatabase;
@@ -242,6 +241,7 @@ public final class GroupsV2StateProcessor {
 
     private void insertUpdateMessages(long timestamp, Collection<GroupLogEntry> processedLogEntries) {
       for (GroupLogEntry entry : processedLogEntries) {
+        // TODO: GV2 Maybe don't insert for profile key only updates
         storeMessage(GroupProtoUtil.createDecryptedGroupV2Context(masterKey, entry.getGroup(), entry.getChange()), timestamp);
       }
     }
