@@ -219,6 +219,7 @@ public class ManageGroupFragment extends Fragment {
     addMembers.setOnClickListener(v -> {
       Intent intent = new Intent(requireActivity(), PushContactSelectionActivity.class);
       intent.putExtra(ContactSelectionListFragment.DISPLAY_MODE, ContactsCursorLoader.DisplayMode.FLAG_PUSH);
+      intent.putExtra(ContactSelectionListFragment.REQUIRE_UUID, groupId.isV2());
       startActivityForResult(intent, PICK_CONTACT);
     });
 

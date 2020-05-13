@@ -97,6 +97,12 @@ public class SendReadReceiptJob extends BaseJob {
       return;
     }
 
+    if (recipientId.equals(RecipientId.UNKNOWN)) {
+      // TODO: GV2 need to stop these getting queued in the first place
+      Log.w(TAG, "UNKNOWN!!!");
+      return;
+    }
+
     Recipient                   recipient      = Recipient.resolved(recipientId);
     SignalServiceMessageSender  messageSender  = ApplicationDependencies.getSignalServiceMessageSender();
     SignalServiceAddress        remoteAddress  = RecipientUtil.toSignalServiceAddress(context, recipient);

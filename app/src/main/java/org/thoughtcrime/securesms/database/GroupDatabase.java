@@ -396,6 +396,7 @@ public final class GroupDatabase extends Database {
     contentValues.put(V2_REVISION, decryptedGroup.getVersion());
     contentValues.put(V2_DECRYPTED_GROUP, decryptedGroup.toByteArray());
     contentValues.put(MEMBERS, serializeV2GroupMembers(context, decryptedGroup));
+    contentValues.put(ACTIVE, 1);
 
     databaseHelper.getWritableDatabase().update(TABLE_NAME, contentValues,
                                                 GROUP_ID + " = ?",
