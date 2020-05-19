@@ -648,7 +648,7 @@ public class SignalServiceAccountManager {
   public void setProfileName(ProfileKey key, String name)
       throws IOException
   {
-    if (FeatureFlags.VERSIONED_PROFILES) {
+    if (FeatureFlags.DISALLOW_OLD_PROFILE_SETTING) {
       throw new AssertionError();
     }
 
@@ -662,7 +662,7 @@ public class SignalServiceAccountManager {
   public Optional<String> setProfileAvatar(ProfileKey key, StreamDetails avatar)
       throws IOException
   {
-    if (FeatureFlags.VERSIONED_PROFILES) {
+    if (FeatureFlags.DISALLOW_OLD_PROFILE_SETTING) {
       throw new AssertionError();
     }
 
@@ -684,10 +684,6 @@ public class SignalServiceAccountManager {
   public Optional<String> setVersionedProfile(UUID uuid, ProfileKey profileKey, String name, StreamDetails avatar)
       throws IOException
   {
-    if (!FeatureFlags.VERSIONED_PROFILES) {
-      throw new AssertionError();
-    }
-
     if (name == null) name = "";
 
     byte[]            ciphertextName    = new ProfileCipher(profileKey).encryptName(name.getBytes(StandardCharsets.UTF_8), ProfileCipher.NAME_PADDED_LENGTH);

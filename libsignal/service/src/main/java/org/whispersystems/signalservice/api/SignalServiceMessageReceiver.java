@@ -130,7 +130,7 @@ public class SignalServiceMessageReceiver {
   {
     Optional<UUID> uuid = address.getUuid();
 
-    if (FeatureFlags.VERSIONED_PROFILES && requestType == SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL && uuid.isPresent() && profileKey.isPresent()) {
+    if (requestType == SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL && uuid.isPresent() && profileKey.isPresent()) {
       return socket.retrieveProfile(uuid.get(), profileKey.get(), unidentifiedAccess);
     } else {
       return new ProfileAndCredential(socket.retrieveProfile(address, unidentifiedAccess),

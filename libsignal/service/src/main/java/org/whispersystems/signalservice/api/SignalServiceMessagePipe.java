@@ -187,7 +187,7 @@ public class SignalServiceMessagePipe {
                                                                        .setVerb("GET")
                                                                        .addAllHeaders(headers);
 
-      if (FeatureFlags.VERSIONED_PROFILES && requestType == SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL && uuid.isPresent() && profileKey.isPresent()) {
+      if (requestType == SignalServiceProfile.RequestType.PROFILE_AND_CREDENTIAL && uuid.isPresent() && profileKey.isPresent()) {
         UUID                               target               = uuid.get();
         ProfileKeyVersion                  profileKeyIdentifier = profileKey.get().getProfileKeyVersion(target);
                                            requestContext       = clientZkProfile.createProfileKeyCredentialRequestContext(random, target, profileKey.get());
