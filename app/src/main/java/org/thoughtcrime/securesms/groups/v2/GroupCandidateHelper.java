@@ -5,6 +5,7 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 
+import org.GV2DebugFlags;
 import org.signal.zkgroup.VerificationFailedException;
 import org.signal.zkgroup.profiles.ProfileKey;
 import org.signal.zkgroup.profiles.ProfileKeyCredential;
@@ -72,6 +73,10 @@ public final class GroupCandidateHelper {
           throw new IOException(e);
         }
       }
+    }
+
+    if (GV2DebugFlags.FORCE_INVITES && !candidate.getUuid().equals(Recipient.self().getUuid().get())) {
+      candidate = new GroupCandidate(candidate.getUuid(), Optional.absent());
     }
 
     return candidate;
