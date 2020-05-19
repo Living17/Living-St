@@ -598,10 +598,6 @@ public class PushServiceSocket {
   public ProfileAndCredential retrieveProfile(UUID target, ProfileKey profileKey, Optional<UnidentifiedAccess> unidentifiedAccess)
       throws NonSuccessfulResponseCodeException, PushNetworkException, VerificationFailedException
   {
-    if (!FeatureFlags.VERSIONED_PROFILES) {
-      throw new AssertionError();
-    }
-
     ProfileKeyVersion                  profileKeyIdentifier = profileKey.getProfileKeyVersion(target);
     ProfileKeyCredentialRequestContext requestContext       = clientZkProfileOperations.createProfileKeyCredentialRequestContext(random, target, profileKey);
     ProfileKeyCredentialRequest        request              = requestContext.getRequest();
@@ -636,7 +632,7 @@ public class PushServiceSocket {
   }
 
   public void setProfileName(String name) throws NonSuccessfulResponseCodeException, PushNetworkException {
-    if (FeatureFlags.VERSIONED_PROFILES) {
+    if (FeatureFlags.DISALLOW_OLD_PROFILE_SETTING) {
       throw new AssertionError();
     }
 
@@ -646,7 +642,7 @@ public class PushServiceSocket {
   public Optional<String> setProfileAvatar(ProfileAvatarData profileAvatar)
       throws NonSuccessfulResponseCodeException, PushNetworkException
   {
-    if (FeatureFlags.VERSIONED_PROFILES) {
+    if (FeatureFlags.DISALLOW_OLD_PROFILE_SETTING) {
       throw new AssertionError();
     }
 
@@ -680,10 +676,6 @@ public class PushServiceSocket {
   public Optional<String> writeProfile(SignalServiceProfileWrite signalServiceProfileWrite, ProfileAvatarData profileAvatar)
       throws NonSuccessfulResponseCodeException, PushNetworkException
   {
-    if (!FeatureFlags.VERSIONED_PROFILES) {
-      throw new AssertionError();
-    }
-
     String                        requestBody    = JsonUtil.toJson(signalServiceProfileWrite);
     ProfileAvatarUploadAttributes formAttributes;
 
