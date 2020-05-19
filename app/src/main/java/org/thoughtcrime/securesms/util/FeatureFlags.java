@@ -98,6 +98,12 @@ public final class FeatureFlags {
    */
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   private static final Map<String, Object> FORCED_VALUES = new HashMap<String, Object>() {{
+    put(UUIDS, true);
+    put(MESSAGE_REQUESTS, true);
+    put(NEW_GROUP_UI, true);
+    put(GROUPS_V2, true);
+    put(GROUPS_V2_CREATE, true);
+    put(VERSIONED_PROFILES, true);
   }};
 
   /**

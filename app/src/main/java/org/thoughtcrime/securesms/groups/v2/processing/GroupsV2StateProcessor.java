@@ -273,6 +273,7 @@ public final class GroupsV2StateProcessor {
 
     private void insertUpdateMessages(long timestamp, Collection<GroupLogEntry> processedLogEntries) {
       for (GroupLogEntry entry : processedLogEntries) {
+        // TODO: GV2 Maybe don't insert for profile key only updates
         storeMessage(GroupProtoUtil.createDecryptedGroupV2Context(masterKey, entry.getGroup(), entry.getChange(), null), timestamp);
       }
     }

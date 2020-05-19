@@ -195,6 +195,11 @@ public class ConversationUpdateItem extends LinearLayout
 
     body.setText(messageRecord.getDisplayBody(getContext()));
 
+
+    // TODO GV2 timer update icon
+
+    // TODO: GV2 hide for profile key updates somehow
+
     title.setVisibility(GONE);
     body.setVisibility(VISIBLE);
     date.setVisibility(GONE);
