@@ -336,7 +336,7 @@ public final class GroupsV2StateProcessor {
     }
 
     private void storeMessage(@NonNull DecryptedGroupV2Context decryptedGroupV2Context, long timestamp) {
-      UUID editor = DecryptedGroupUtil.editorUuid(decryptedGroupV2Context.getChange());
+      UUID    editor   = DecryptedGroupUtil.editorUuid(decryptedGroupV2Context.getChange());
       boolean outgoing = Recipient.self().getUuid().get().equals(editor);
 
       if (outgoing) {
@@ -354,7 +354,7 @@ public final class GroupsV2StateProcessor {
         }
       } else {
         SmsDatabase                smsDatabase  = DatabaseFactory.getSmsDatabase(context);
-        RecipientId                sender       = Recipient.externalPush(context, editor, null).getId();
+        RecipientId                sender       = UuidUtil.UNKNOWN_UUID.equals(editor) ? RecipientId.UNKNOWN : RecipientId.from(editor, null);
         IncomingTextMessage        incoming     = new IncomingTextMessage(sender, -1, timestamp, timestamp, "", Optional.of(groupId), 0, false);
         IncomingGroupUpdateMessage groupMessage = new IncomingGroupUpdateMessage(incoming, decryptedGroupV2Context);
 
