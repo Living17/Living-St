@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
+import com.moczul.ok2curl.CurlInterceptor;
 
 import org.signal.storageservice.protos.groups.AvatarUploadAttributes;
 import org.signal.storageservice.protos.groups.Group;
@@ -101,6 +102,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -1432,7 +1434,17 @@ public class PushServiceSocket {
       OkHttpClient            okHttpClient     = baseClient.newBuilder()
                                                            .connectTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
                                                            .readTimeout(soTimeoutMillis, TimeUnit.MILLISECONDS)
-                                                           .build();
+
+//TODO REMOVE
+    .addInterceptor(new CurlInterceptor(message ->{
+      if (StandardCharsets.US_ASCII.newEncoder().canEncode(message)) {
+        Log.v("Ok2Curl", message);
+      } else {
+        Log.v("Ok2Curl", "Can't log this");
+      }
+    }))
+
+    .build();
 
       Log.d(TAG, "Push service URL: " + connectionHolder.getUrl());
       Log.d(TAG, "Opening URL: " + String.format("%s%s", connectionHolder.getUrl(), urlFragment));
