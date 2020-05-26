@@ -17,6 +17,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@null"
+            app:scrimAnimationDuration="200"
             app:contentScrim="?android:attr/windowBackground"
             app:expandedTitleGravity="center_horizontal"
             app:expandedTitleMarginTop="156dp"
