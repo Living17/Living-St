@@ -12,16 +12,11 @@ import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
 import org.thoughtcrime.securesms.util.Util;
 import org.thoughtcrime.securesms.util.concurrent.SignalExecutors;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
-import org.whispersystems.signalservice.api.profiles.SignalServiceProfile;
-import org.whispersystems.signalservice.api.push.exceptions.NotFoundException;
 import org.whispersystems.signalservice.api.push.exceptions.UsernameMalformedException;
 import org.whispersystems.signalservice.api.push.exceptions.UsernameTakenException;
-import org.whispersystems.signalservice.api.util.UuidUtil;
 
 import java.io.IOException;
-import java.util.UUID;
 import java.util.concurrent.Executor;
 
 class UsernameEditRepository {

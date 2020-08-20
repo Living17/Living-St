@@ -1326,7 +1326,6 @@
 
     <!-- UsernameEditFragment -->
     <string name="UsernameEditFragment_username">Username</string>
-    <string name="UsernameEditFragment_submit">Submit</string>
     <string name="UsernameEditFragment_delete">Delete</string>
     <string name="UsernameEditFragment_successfully_set_username">Successfully set username.</string>
     <string name="UsernameEditFragment_successfully_removed_username">Successfully removed username.</string>
@@ -1337,7 +1336,7 @@
     <string name="UsernameEditFragment_usernames_cannot_begin_with_a_number">Usernames cannot begin with a number.</string>
     <string name="UsernameEditFragment_username_is_invalid">Username is invalid.</string>
     <string name="UsernameEditFragment_usernames_must_be_between_a_and_b_characters">Usernames must be between %1$d and %2$d characters.</string>
-    <string name="UsernameEditFragment_other_signal_users_can_send_message_requests_to_your_unique_username">Other Signal users can send message requests to your unique username without knowing your phone number. Choosing a username is optional.</string>
+    <string name="UsernameEditFragment_usernames_on_signal_are_optional">Usernames on Signal are optional. If you choose to create a username, other Signal users will be able to find you by this username and contact you without knowing your phone number.</string>
 
     <!-- VerifyIdentityActivity -->
     <string name="VerifyIdentityActivity_your_contact_is_running_an_old_version_of_signal">Your contact is running an old version of Signal. Please ask them to update before verifying your safety number.</string>

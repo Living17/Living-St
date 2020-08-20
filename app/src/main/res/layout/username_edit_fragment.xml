@@ -6,7 +6,6 @@
     android:layout_height="match_parent"
     android:layout_marginStart="16dp"
     android:layout_marginEnd="16dp"
-    android:layout_marginBottom="16dp"
     android:orientation="vertical">
 
   <EditText
@@ -15,7 +14,7 @@
       android:layout_width="0dp"
       android:layout_height="wrap_content"
       android:layout_marginTop="48dp"
-      android:hint="@string/CreateProfileActivity__create_a_username"
+      android:hint="@string/UsernameEditFragment_username"
       android:imeOptions="actionDone"
       android:inputType="text"
       android:maxLines="1"
@@ -41,7 +40,7 @@
       android:layout_height="0dp"
       android:layout_marginTop="16dp"
       android:layout_marginBottom="16dp"
-      android:text="@string/UsernameEditFragment_other_signal_users_can_send_message_requests_to_your_unique_username"
+      android:text="@string/UsernameEditFragment_usernames_on_signal_are_optional"
       app:layout_constraintEnd_toEndOf="parent"
       app:layout_constraintStart_toStartOf="parent"
       app:layout_constraintTop_toBottomOf="@id/username_subtext"
@@ -49,38 +48,38 @@
 
   <com.dd.CircularProgressButton
       android:id="@+id/username_submit_button"
-      android:layout_width="0dp"
+      android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:layout_marginTop="32dp"
+      android:layout_marginBottom="16dp"
       android:background="@color/core_ultramarine"
       android:textAllCaps="true"
       android:textColor="@color/white"
-      app:cpb_colorIndicator="@color/white"
-      app:cpb_colorProgress="@color/core_ultramarine"
+      app:cpb_colorIndicator="?colorAccent"
+      app:cpb_colorProgress="@color/transparent"
       app:cpb_cornerRadius="4dp"
       app:cpb_selectorIdle="@drawable/progress_button_state_light"
-      app:cpb_textIdle="@string/UsernameEditFragment_submit"
+      app:cpb_textIdle="@string/save"
       app:layout_constraintBottom_toBottomOf="parent"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintStart_toStartOf="parent" />
+      app:layout_constraintEnd_toEndOf="parent" />
 
   <com.dd.CircularProgressButton
       android:id="@+id/username_delete_button"
-      android:layout_width="0dp"
+      android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:layout_marginTop="32dp"
+      android:layout_marginBottom="16dp"
       android:background="@color/core_red"
       android:textAllCaps="true"
       android:textColor="@color/white"
       android:visibility="gone"
-      app:cpb_colorIndicator="@color/white"
-      app:cpb_colorProgress="@color/core_red"
+      app:cpb_colorIndicator="@color/core_red"
+      app:cpb_colorProgress="@color/transparent"
       app:cpb_cornerRadius="4dp"
       app:cpb_selectorIdle="@drawable/progress_button_state_red"
       app:cpb_textIdle="@string/UsernameEditFragment_delete"
       app:layout_constraintBottom_toBottomOf="parent"
-      app:layout_constraintEnd_toEndOf="parent"
-      app:layout_constraintStart_toStartOf="parent" />
+      app:layout_constraintEnd_toEndOf="parent" />
 
   <androidx.constraintlayout.widget.Barrier
       android:id="@+id/username_button_barrier"
