@@ -1781,7 +1781,7 @@
     <string name="CreateProfileActivity_last_name_optional">Last name (optional)</string>
     <string name="CreateProfileActivity_next">Next</string>
     <string name="CreateProfileActivity__username">Username</string>
-    <string name="CreateProfileActivity__create_a_username">Create a username</string>
+    <string name="CreateProfileActivity__setup_a_username">Setup a username</string>
 
     <!-- EditProfileFragment -->
     <string name="EditProfileFragment__edit_group_name_and_photo">Edit group name and photo</string>

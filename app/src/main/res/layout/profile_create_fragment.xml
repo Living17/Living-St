@@ -152,50 +152,22 @@
                         android:singleLine="true" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/profile_overview_username_label"
-                    style="@style/Signal.Text.Caption"
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/profile_overview_username"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginTop="14dp"
-                    android:layout_marginEnd="16dp"
-                    android:text="@string/CreateProfileActivity__username"
-                    android:visibility="gone"
+                    android:layout_height="56dp"
+                    android:background="?selectableItemBackground"
+                    android:drawablePadding="34dp"
+                    android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="@string/CreateProfileActivity__setup_a_username"
+                    android:textAppearance="@style/Signal.Text.Body"
+                    app:drawableStartCompat="@drawable/ic_at_24"
+                    app:drawableTint="?icon_tint"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/name_container" />
-
-                <EditText
-                    android:id="@+id/profile_overview_username"
-                    style="@style/Signal.Text.Body"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginTop="2dp"
-                    android:layout_marginEnd="16dp"
-                    android:background="@null"
-                    android:editable="false"
-                    android:focusable="false"
-                    android:hint="@string/CreateProfileActivity__create_a_username"
-                    android:visibility="gone"
-                    app:layout_constraintEnd_toStartOf="@id/profile_overview_username_edit_button"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/profile_overview_username_label" />
-
-                <ImageView
-                    android:id="@+id/profile_overview_username_edit_button"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"
-                    android:padding="8dp"
-                    android:tint="@color/core_grey_55"
-                    android:visibility="gone"
-                    app:layout_constraintBottom_toBottomOf="@id/profile_overview_username"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="@id/profile_overview_username"
-                    app:srcCompat="@drawable/ic_compose_solid_24" />
 
                 <org.thoughtcrime.securesms.util.views.LearnMoreTextView
                     android:id="@+id/description_text"
@@ -203,14 +175,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
-                    android:layout_marginTop="11dp"
+                    android:layout_marginTop="16dp"
                     android:layout_marginEnd="16dp"
                     android:layout_marginBottom="16dp"
                     android:text="@string/CreateProfileActivity_signal_profiles_are_end_to_end_encrypted"
                     android:textColor="@color/core_grey_60"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/profile_overview_username_edit_button"
+                    app:layout_constraintTop_toBottomOf="@+id/profile_overview_username"
                     app:layout_constraintVertical_bias="1.0" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
@@ -223,9 +195,9 @@
             android:layout_height="50dp"
             android:layout_gravity="center_horizontal"
             android:layout_marginStart="32dp"
+            android:layout_marginTop="16dp"
             android:layout_marginEnd="32dp"
             android:layout_marginBottom="16dp"
-            android:layout_marginTop="16dp"
             android:background="@color/core_ultramarine"
             android:enabled="false"
             android:textAllCaps="true"

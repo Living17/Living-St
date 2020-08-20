@@ -76,8 +76,6 @@ public class EditProfileFragment extends LoggingFragment {
   private EditText               familyName;
   private View                   reveal;
   private TextView               preview;
-  private View                   usernameLabel;
-  private View                   usernameEditButton;
   private TextView               username;
 
   private Intent nextIntent;
@@ -222,14 +220,10 @@ public class EditProfileFragment extends LoggingFragment {
     this.reveal             = view.findViewById(R.id.reveal);
     this.preview            = view.findViewById(R.id.name_preview);
     this.username           = view.findViewById(R.id.profile_overview_username);
-    this.usernameEditButton = view.findViewById(R.id.profile_overview_username_edit_button);
-    this.usernameLabel      = view.findViewById(R.id.profile_overview_username_label);
     this.nextIntent         = arguments.getParcelable(NEXT_INTENT);
 
     if (FeatureFlags.usernames() && arguments.getBoolean(DISPLAY_USERNAME, false)) {
       username.setVisibility(View.VISIBLE);
-      usernameEditButton.setVisibility(View.VISIBLE);
-      usernameLabel.setVisibility(View.VISIBLE);
     }
 
     this.avatar.setOnClickListener(v -> Permissions.with(this)
@@ -270,7 +264,7 @@ public class EditProfileFragment extends LoggingFragment {
 
     this.finishButton.setText(arguments.getInt(NEXT_BUTTON_TEXT, R.string.CreateProfileActivity_next));
 
-    this.usernameEditButton.setOnClickListener(v -> {
+    this.username.setOnClickListener(v -> {
       NavDirections action = EditProfileFragmentDirections.actionEditUsername();
       Navigation.findNavController(v).navigate(action);
     });
@@ -326,7 +320,7 @@ public class EditProfileFragment extends LoggingFragment {
   }
 
   private void onUsernameChanged(@NonNull Optional<String> username) {
-    this.username.setText(username.transform(s -> "@" + s).or(""));
+    this.username.setText(username.or(getString(R.string.CreateProfileActivity__setup_a_username)));
   }
 
   private void startAvatarSelection() {
