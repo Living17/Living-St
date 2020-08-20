@@ -43,6 +43,7 @@ import org.thoughtcrime.securesms.profiles.edit.EditProfileActivity;
 import org.thoughtcrime.securesms.service.KeyCachingService;
 import org.thoughtcrime.securesms.util.DynamicLanguage;
 import org.thoughtcrime.securesms.util.DynamicTheme;
+import org.thoughtcrime.securesms.util.FeatureFlags;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
 import org.thoughtcrime.securesms.util.ThemeUtil;
 
@@ -59,7 +60,10 @@ public class ApplicationPreferencesActivity extends PassphraseRequiredActivity
   @SuppressWarnings("unused")
   private static final String TAG = ApplicationPreferencesActivity.class.getSimpleName();
 
+  private static final short USERNAME_RESULT_CODE = 27623;
+
   private static final String PREFERENCE_CATEGORY_PROFILE        = "preference_category_profile";
+  private static final String PREFERENCE_CATEGORY_USERNAME       = "preference_category_username";
   private static final String PREFERENCE_CATEGORY_SMS_MMS        = "preference_category_sms_mms";
   private static final String PREFERENCE_CATEGORY_NOTIFICATIONS  = "preference_category_notifications";
   private static final String PREFERENCE_CATEGORY_APP_PROTECTION = "preference_category_app_protection";
@@ -142,6 +146,8 @@ public class ApplicationPreferencesActivity extends PassphraseRequiredActivity
 
       this.findPreference(PREFERENCE_CATEGORY_PROFILE)
           .setOnPreferenceClickListener(new ProfileClickListener());
+      this.findPreference(PREFERENCE_CATEGORY_USERNAME)
+          .setOnPreferenceClickListener(new UsernameClickListener());
       this.findPreference(PREFERENCE_CATEGORY_SMS_MMS)
         .setOnPreferenceClickListener(new CategoryClickListener(PREFERENCE_CATEGORY_SMS_MMS));
       this.findPreference(PREFERENCE_CATEGORY_NOTIFICATIONS)
@@ -174,6 +180,10 @@ public class ApplicationPreferencesActivity extends PassphraseRequiredActivity
     @Override
     public void onCreatePreferences(@Nullable Bundle savedInstanceState, String rootKey) {
       addPreferencesFromResource(R.xml.preferences);
+
+      if (FeatureFlags.usernames()) {
+        findPreference(PREFERENCE_CATEGORY_USERNAME).setVisible(hasUsername());
+      }
     }
 
     @Override
@@ -187,6 +197,11 @@ public class ApplicationPreferencesActivity extends PassphraseRequiredActivity
 
     private void setCategorySummaries() {
       ((ProfilePreference)this.findPreference(PREFERENCE_CATEGORY_PROFILE)).refresh();
+
+      // TODO [alex] -- when should we actually show this?
+      if (FeatureFlags.usernames()) {
+        this.findPreference(PREFERENCE_CATEGORY_USERNAME).setVisible(hasUsername());
+      }
 
       this.findPreference(PREFERENCE_CATEGORY_SMS_MMS)
           .setSummary(SmsMmsPreferenceFragment.getSummary(getActivity()));
@@ -205,6 +220,10 @@ public class ApplicationPreferencesActivity extends PassphraseRequiredActivity
       if (devicePreference != null && !TextSecurePreferences.isPushRegistered(getActivity())) {
         getPreferenceScreen().removePreference(devicePreference);
       }
+    }
+
+    private boolean hasUsername() {
+      return TextSecurePreferences.getLocalUsername(requireContext()) != null;
     }
 
     private class CategoryClickListener implements Preference.OnPreferenceClickListener {
@@ -273,6 +292,14 @@ public class ApplicationPreferencesActivity extends PassphraseRequiredActivity
       @Override
       public boolean onPreferenceClick(Preference preference) {
         requireActivity().startActivity(EditProfileActivity.getIntentForUserProfileEdit(preference.getContext()));
+        return true;
+      }
+    }
+
+    private class UsernameClickListener implements Preference.OnPreferenceClickListener {
+      @Override
+      public boolean onPreferenceClick(Preference preference) {
+        requireActivity().startActivity(EditProfileActivity.getIntentForUsernameEdit(preference.getContext()));
         return true;
       }
     }

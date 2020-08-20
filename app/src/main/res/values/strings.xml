@@ -2069,6 +2069,7 @@
     <string name="preferences_notifications__mentions">Mentions</string>
     <string name="preferences_notifications__notify_me">Notify me</string>
     <string name="preferences_notifications__receive_notifications_when_youre_mentioned_in_muted_chats">Receive notifications when you’re mentioned in muted chats</string>
+    <string name="preferences_setup_a_username">Setup a username</string>
 
     <!-- Internal only preferences -->
     <string name="preferences__internal_preferences" translatable="false">Internal Preferences</string>
